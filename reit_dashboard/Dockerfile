@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system deps for lxml
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libxml2-dev libxslt1-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# Create runtime dirs (cache + logs live inside container)
+RUN mkdir -p data/cache data/processed logs
+
+EXPOSE 8501
+
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+
+ENTRYPOINT ["python3", "-m", "streamlit", "run", "app.py", \
+            "--server.port=8501", \
+            "--server.address=0.0.0.0", \
+            "--server.headless=true"]
