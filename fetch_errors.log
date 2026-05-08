@@ -1,0 +1,129 @@
+{"time": "2026-05-07T18:07:53", "level": "ERROR", "logger": "asyncio", "msg": Task exception was never retrieved
+future: <Task finished name='Task-5103' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>}
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError
+{"time": "2026-05-07T18:07:53", "level": "ERROR", "logger": "asyncio", "msg": Task exception was never retrieved
+future: <Task finished name='Task-5103' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>}
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError
+{"time": "2026-05-07T18:07:53", "level": "ERROR", "logger": "asyncio", "msg": Task exception was never retrieved
+future: <Task finished name='Task-5103' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>}
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError
+{"time": "2026-05-07T18:07:53", "level": "ERROR", "logger": "asyncio", "msg": Task exception was never retrieved
+future: <Task finished name='Task-5103' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>}
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError
+{"time": "2026-05-07T18:07:53", "level": "ERROR", "logger": "asyncio", "msg": Task exception was never retrieved
+future: <Task finished name='Task-5103' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>}
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError
+{"time": "2026-05-07T18:07:53", "level": "ERROR", "logger": "asyncio", "msg": Task exception was never retrieved
+future: <Task finished name='Task-5103' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>}
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError
+{"time": "2026-05-07T18:07:53", "level": "ERROR", "logger": "asyncio", "msg": Task exception was never retrieved
+future: <Task finished name='Task-5103' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>}
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/jaedenkinlock/Library/Python/3.9/lib/python/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError
+{"time": "2026-05-07T19:06:25", "level": "ERROR", "logger": "src.fetchers.rss_fetcher", "msg": RSS fetch failed — Propmodo: 403 Client Error: Forbidden for url: https://propmodo.com/feed/}
+{"time": "2026-05-07T19:08:52", "level": "ERROR", "logger": "src.fetchers.rss_fetcher", "msg": RSS fetch failed — Propmodo: 403 Client Error: Forbidden for url: https://propmodo.com/feed/}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — homeowner_vacancy (RHVRUSQ156N): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — mortgage30 (MORTGAGE30US): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
+{"time": "2026-05-07T19:10:37", "level": "ERROR", "logger": "src.fetchers.fred_fetcher", "msg": FRED fetch failed — case_shiller (CSUSHPISA): Internal Server Error}
