@@ -9,7 +9,12 @@ from config import (
     RPM_MID, RPM_AMBER, RPM_GREEN, RPM_RED, RPM_GREEN_LT, RPM_RED_LT, RPM_AMBER_LT,
 )
 from src.fetchers.yfinance_fetcher import fetch_all_fundamentals
-from src.fetchers.rss_fetcher import fetch_news, fetch_ticker_news
+from src.fetchers.rss_fetcher import fetch_news
+try:
+    from src.fetchers.rss_fetcher import fetch_ticker_news
+except ImportError:
+    def fetch_ticker_news(tickers, max_per_ticker=3):  # fallback if module not yet deployed
+        return {t: [] for t in tickers}
 from src.processors.fundamentals import build_fundamentals_table
 from src.processors.deal_scorer import score_deal, MARKET_DATA, TREASURY_10Y_REF
 from src.utils.cache import cache_timestamp
