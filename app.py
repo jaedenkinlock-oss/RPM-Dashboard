@@ -21,7 +21,7 @@ from src.utils.cache import cache_timestamp
 from src.utils.formatters import fmt_large, fmt_pct, fmt_multiple
 
 st.set_page_config(
-    page_title="RPM Dashboard — Multifamily REIT Intelligence · Jaeden Kinlock",
+    page_title="RPM Living Dashboard — Multifamily REIT Intelligence · Jaeden Kinlock",
     page_icon=None,
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -34,7 +34,7 @@ _PREVIEW_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="6
   <rect width="1200" height="630" fill="#111111"/>
   <rect width="1200" height="5" fill="#C8A96E"/>
   <rect y="625" width="1200" height="5" fill="#C8A96E"/>
-  <text x="72" y="190" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="80" font-weight="200" fill="#ffffff" letter-spacing="-2">RPM Dashboard</text>
+  <text x="72" y="190" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="80" font-weight="200" fill="#ffffff" letter-spacing="-2">RPM Living Dashboard</text>
   <text x="76" y="242" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="22" font-weight="400" fill="#C8A96E" letter-spacing="6">MULTIFAMILY REIT INTELLIGENCE</text>
   <rect x="72" y="272" width="240" height="1" fill="#333333"/>
   <text x="72" y="348" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" font-weight="200" fill="#ffffff">225K+</text>
@@ -55,22 +55,22 @@ _OG_URI = f"data:image/svg+xml;base64,{_PREVIEW_B64}"
 
 st.markdown(f"""
 <meta property="og:type" content="website">
-<meta property="og:title" content="RPM Dashboard — Multifamily REIT Intelligence">
+<meta property="og:title" content="RPM Living Dashboard — Multifamily REIT Intelligence">
 <meta property="og:description" content="225K+ units under management · 21 REIT comparables · 19 Sun Belt target markets · by Jaeden Kinlock">
 <meta property="og:image" content="{_OG_URI}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="RPM Dashboard — Multifamily REIT Intelligence">
+<meta name="twitter:title" content="RPM Living Dashboard — Multifamily REIT Intelligence">
 <meta name="twitter:description" content="225K+ units · 19 target markets · 21 REIT comparables · Jaeden Kinlock">
 <meta name="twitter:image" content="{_OG_URI}">
 <script>
 (function(){{
   var metas = [
     {{'property':'og:type',        'content':'website'}},
-    {{'property':'og:title',       'content':'RPM Dashboard — Multifamily REIT Intelligence'}},
+    {{'property':'og:title',       'content':'RPM Living Dashboard — Multifamily REIT Intelligence'}},
     {{'property':'og:description', 'content':'225K+ units under management · 21 REIT comparables · 19 Sun Belt target markets · by Jaeden Kinlock'}},
     {{'property':'og:image',       'content':'{_OG_URI}'}},
     {{'name':'twitter:card',       'content':'summary_large_image'}},
-    {{'name':'twitter:title',      'content':'RPM Dashboard — Multifamily REIT Intelligence'}},
+    {{'name':'twitter:title',      'content':'RPM Living Dashboard — Multifamily REIT Intelligence'}},
     {{'name':'twitter:image',      'content':'{_OG_URI}'}},
   ];
   metas.forEach(function(m){{
