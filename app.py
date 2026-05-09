@@ -1,3 +1,4 @@
+import base64
 import streamlit as st
 from datetime import datetime
 import pandas as pd
@@ -8,18 +9,75 @@ from config import (
     RPM_MID, RPM_AMBER, RPM_GREEN, RPM_RED, RPM_GREEN_LT, RPM_RED_LT, RPM_AMBER_LT,
 )
 from src.fetchers.yfinance_fetcher import fetch_all_fundamentals
-from src.fetchers.rss_fetcher import fetch_news
+from src.fetchers.rss_fetcher import fetch_news, fetch_ticker_news
 from src.processors.fundamentals import build_fundamentals_table
 from src.processors.deal_scorer import score_deal, MARKET_DATA, TREASURY_10Y_REF
 from src.utils.cache import cache_timestamp
 from src.utils.formatters import fmt_large, fmt_pct, fmt_multiple
 
 st.set_page_config(
-    page_title="RPM Dashboard — Jaeden Kinlock",
+    page_title="RPM Dashboard — Multifamily REIT Intelligence · Jaeden Kinlock",
     page_icon=None,
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+# ── Social preview / OG image ──────────────────────────────────────────────────
+# SVG is base64-encoded and injected as og:image so link previews in Slack,
+# iMessage, and LinkedIn show a branded card instead of a blank/error state.
+_PREVIEW_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#111111"/>
+  <rect width="1200" height="5" fill="#C8A96E"/>
+  <rect y="625" width="1200" height="5" fill="#C8A96E"/>
+  <text x="72" y="190" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="80" font-weight="200" fill="#ffffff" letter-spacing="-2">RPM Dashboard</text>
+  <text x="76" y="242" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="22" font-weight="400" fill="#C8A96E" letter-spacing="6">MULTIFAMILY REIT INTELLIGENCE</text>
+  <rect x="72" y="272" width="240" height="1" fill="#333333"/>
+  <text x="72" y="348" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" font-weight="200" fill="#ffffff">225K+</text>
+  <text x="72" y="378" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="13" fill="#888888" letter-spacing="4">UNITS UNDER MANAGEMENT</text>
+  <text x="380" y="348" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" font-weight="200" fill="#ffffff">19</text>
+  <text x="380" y="378" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="13" fill="#888888" letter-spacing="4">TARGET MARKETS</text>
+  <text x="620" y="348" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" font-weight="200" fill="#ffffff">21</text>
+  <text x="620" y="378" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="13" fill="#888888" letter-spacing="4">REIT COMPARABLES</text>
+  <text x="860" y="348" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" font-weight="200" fill="#ffffff">90+</text>
+  <text x="860" y="378" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="13" fill="#888888" letter-spacing="4">FULL-CYCLE INVESTMENTS</text>
+  <rect x="72" y="430" width="1056" height="0.5" fill="#222222"/>
+  <text x="72" y="470" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="18" fill="#555555" letter-spacing="1">Sun Belt · Vertically Integrated · Value-Add · Build-to-Rent</text>
+  <text x="72" y="560" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="18" font-weight="300" fill="#555555" letter-spacing="3">by Jaeden Kinlock</text>
+</svg>"""
+
+_PREVIEW_B64 = base64.b64encode(_PREVIEW_SVG.encode()).decode()
+_OG_URI = f"data:image/svg+xml;base64,{_PREVIEW_B64}"
+
+st.markdown(f"""
+<meta property="og:type" content="website">
+<meta property="og:title" content="RPM Dashboard — Multifamily REIT Intelligence">
+<meta property="og:description" content="225K+ units under management · 21 REIT comparables · 19 Sun Belt target markets · by Jaeden Kinlock">
+<meta property="og:image" content="{_OG_URI}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="RPM Dashboard — Multifamily REIT Intelligence">
+<meta name="twitter:description" content="225K+ units · 19 target markets · 21 REIT comparables · Jaeden Kinlock">
+<meta name="twitter:image" content="{_OG_URI}">
+<script>
+(function(){{
+  var metas = [
+    {{'property':'og:type',        'content':'website'}},
+    {{'property':'og:title',       'content':'RPM Dashboard — Multifamily REIT Intelligence'}},
+    {{'property':'og:description', 'content':'225K+ units under management · 21 REIT comparables · 19 Sun Belt target markets · by Jaeden Kinlock'}},
+    {{'property':'og:image',       'content':'{_OG_URI}'}},
+    {{'name':'twitter:card',       'content':'summary_large_image'}},
+    {{'name':'twitter:title',      'content':'RPM Dashboard — Multifamily REIT Intelligence'}},
+    {{'name':'twitter:image',      'content':'{_OG_URI}'}},
+  ];
+  metas.forEach(function(m){{
+    var el = document.createElement('meta');
+    var key = m.property ? 'property' : 'name';
+    el.setAttribute(key, m[key]);
+    el.setAttribute('content', m.content);
+    document.head.appendChild(el);
+  }});
+}})();
+</script>
+""", unsafe_allow_html=True)
 
 # ── CSS ────────────────────────────────────────────────────────────────────────
 
@@ -775,6 +833,48 @@ with tab_reits:
         </div>
         <div class="src-bar" style="margin-top:6px;">Source: yfinance &nbsp;&middot;&nbsp; {ts} &nbsp;&middot;&nbsp; FFO [est.] = Net Income TTM + D&amp;A TTM &nbsp;&middot;&nbsp; EDGAR 10-K/10-Q FFO in Phase 2.</div>
         """, unsafe_allow_html=True)
+
+        # ── RSS quote verification ─────────────────────────────────────────────
+        with st.spinner(""):
+            _ticker_news = fetch_ticker_news([_tick_sel], max_per_ticker=4)
+        _tn = _ticker_news.get(_tick_sel, [])
+
+        if _tn:
+            _now = datetime.utcnow()
+            _most_recent = _tn[0]["date"].replace(tzinfo=None) if _tn[0]["date"].tzinfo else _tn[0]["date"]
+            _age_hours = (_now - _most_recent).total_seconds() / 3600
+            _freshness = (
+                "Live — within 6 hours" if _age_hours < 6 else
+                "Recent — within 24 hours" if _age_hours < 24 else
+                f"Last coverage {int(_age_hours / 24)}d ago"
+            )
+            _fresh_color = "#5a9e70" if _age_hours < 24 else "#999"
+            headlines_html = "".join([
+                f'<div style="padding:7px 0;border-bottom:1px solid #f0ede7;">'
+                f'<a href="{a["link"]}" target="_blank" style="font-size:12px;color:#111;text-decoration:none;line-height:1.45;">'
+                f'{a["title"]}</a>'
+                f'<span style="font-size:10px;color:#999;margin-left:8px;">'
+                f'{a["date"].strftime("%b %d") if a["date"] else ""}</span>'
+                f'</div>'
+                for a in _tn
+            ])
+            st.markdown(f"""
+            <div style="background:#fff;border:0.5px solid #ddd;border-left:3px solid {_fresh_color};
+                 padding:12px 16px;margin-top:6px;
+                 font-family:'Helvetica Neue',Arial,sans-serif;">
+              <div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
+                   font-weight:600;color:{_fresh_color};margin-bottom:8px;">
+                Yahoo Finance — {_tick_sel} Recent Coverage &nbsp;·&nbsp; {_freshness}
+              </div>
+              {headlines_html}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(
+                f'<div style="font-size:11px;color:#999;padding:8px 0;">'
+                f'No recent RSS headlines found for {_tick_sel} — price data sourced from yfinance ({ts}).</div>',
+                unsafe_allow_html=True,
+            )
 
     with st.expander("Raw data — all columns"):
         st.dataframe(filtered, use_container_width=True)
