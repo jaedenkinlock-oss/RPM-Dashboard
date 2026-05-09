@@ -1,4 +1,3 @@
-import base64
 import streamlit as st
 from datetime import datetime
 import pandas as pd
@@ -30,54 +29,37 @@ st.set_page_config(
 # ── Social preview / OG image ──────────────────────────────────────────────────
 # SVG is base64-encoded and injected as og:image so link previews in Slack,
 # iMessage, and LinkedIn show a branded card instead of a blank/error state.
-_PREVIEW_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#111111"/>
-  <rect width="1200" height="5" fill="#C8A96E"/>
-  <rect y="625" width="1200" height="5" fill="#C8A96E"/>
-  <text x="72" y="190" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="80" font-weight="200" fill="#ffffff" letter-spacing="-2">RPM Living Dashboard</text>
-  <text x="76" y="242" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="22" font-weight="400" fill="#C8A96E" letter-spacing="6">MULTIFAMILY REIT INTELLIGENCE</text>
-  <rect x="72" y="272" width="240" height="1" fill="#333333"/>
-  <text x="72" y="348" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" font-weight="200" fill="#ffffff">225K+</text>
-  <text x="72" y="378" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="13" fill="#888888" letter-spacing="4">UNITS UNDER MANAGEMENT</text>
-  <text x="380" y="348" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" font-weight="200" fill="#ffffff">19</text>
-  <text x="380" y="378" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="13" fill="#888888" letter-spacing="4">TARGET MARKETS</text>
-  <text x="620" y="348" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" font-weight="200" fill="#ffffff">21</text>
-  <text x="620" y="378" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="13" fill="#888888" letter-spacing="4">REIT COMPARABLES</text>
-  <text x="860" y="348" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="52" font-weight="200" fill="#ffffff">90+</text>
-  <text x="860" y="378" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="13" fill="#888888" letter-spacing="4">FULL-CYCLE INVESTMENTS</text>
-  <rect x="72" y="430" width="1056" height="0.5" fill="#222222"/>
-  <text x="72" y="470" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="18" fill="#555555" letter-spacing="1">Sun Belt · Vertically Integrated · Value-Add · Build-to-Rent</text>
-  <text x="72" y="560" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="18" font-weight="300" fill="#555555" letter-spacing="3">by Jaeden Kinlock</text>
-</svg>"""
-
-_PREVIEW_B64 = base64.b64encode(_PREVIEW_SVG.encode()).decode()
-_OG_URI = f"data:image/svg+xml;base64,{_PREVIEW_B64}"
+_OG_IMAGE = "https://raw.githubusercontent.com/jaedenkinlock-oss/RPM-Dashboard/main/assets/preview.png"
+_OG_TITLE = "RPM Living Dashboard — Multifamily REIT Intelligence"
+_OG_DESC  = "225K+ units under management · 21 REIT comparables · 19 Sun Belt target markets · by Jaeden Kinlock"
 
 st.markdown(f"""
-<meta property="og:type" content="website">
-<meta property="og:title" content="RPM Living Dashboard — Multifamily REIT Intelligence">
-<meta property="og:description" content="225K+ units under management · 21 REIT comparables · 19 Sun Belt target markets · by Jaeden Kinlock">
-<meta property="og:image" content="{_OG_URI}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="RPM Living Dashboard — Multifamily REIT Intelligence">
-<meta name="twitter:description" content="225K+ units · 19 target markets · 21 REIT comparables · Jaeden Kinlock">
-<meta name="twitter:image" content="{_OG_URI}">
+<meta property="og:type"        content="website">
+<meta property="og:title"       content="{_OG_TITLE}">
+<meta property="og:description" content="{_OG_DESC}">
+<meta property="og:image"       content="{_OG_IMAGE}">
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="{_OG_TITLE}">
+<meta name="twitter:description" content="{_OG_DESC}">
+<meta name="twitter:image"       content="{_OG_IMAGE}">
 <script>
 (function(){{
-  var metas = [
-    {{'property':'og:type',        'content':'website'}},
-    {{'property':'og:title',       'content':'RPM Living Dashboard — Multifamily REIT Intelligence'}},
-    {{'property':'og:description', 'content':'225K+ units under management · 21 REIT comparables · 19 Sun Belt target markets · by Jaeden Kinlock'}},
-    {{'property':'og:image',       'content':'{_OG_URI}'}},
-    {{'name':'twitter:card',       'content':'summary_large_image'}},
-    {{'name':'twitter:title',      'content':'RPM Living Dashboard — Multifamily REIT Intelligence'}},
-    {{'name':'twitter:image',      'content':'{_OG_URI}'}},
-  ];
-  metas.forEach(function(m){{
+  var img = "{_OG_IMAGE}";
+  var ttl = "{_OG_TITLE}";
+  var dsc = "{_OG_DESC}";
+  [
+    ['property','og:type',        'website'],
+    ['property','og:title',       ttl],
+    ['property','og:description', dsc],
+    ['property','og:image',       img],
+    ['name','twitter:card',        'summary_large_image'],
+    ['name','twitter:title',       ttl],
+    ['name','twitter:description', dsc],
+    ['name','twitter:image',       img],
+  ].forEach(function(m){{
     var el = document.createElement('meta');
-    var key = m.property ? 'property' : 'name';
-    el.setAttribute(key, m[key]);
-    el.setAttribute('content', m.content);
+    el.setAttribute(m[0], m[1]);
+    el.setAttribute('content', m[2]);
     document.head.appendChild(el);
   }});
 }})();
