@@ -1482,6 +1482,19 @@ with tab_deal:
                                             value=TREASURY_10Y_REF, step=0.05, format="%.2f",
                                             help=f"Default: {TREASURY_10Y_REF}% (Q1 2026 proxy). Update to current rate for live analysis.")
 
+            st.markdown("""
+<style>
+button[kind="primaryFormSubmit"], button[kind="primaryFormSubmit"] * {
+  color: #ffffff !important;
+}
+[data-testid="stFormSubmitButton"] button,
+[data-testid="stFormSubmitButton"] button *,
+[data-testid="stFormSubmitButton"] p,
+[data-testid="stFormSubmitButton"] span {
+  color: #ffffff !important;
+}
+</style>
+""", unsafe_allow_html=True)
             submitted = st.form_submit_button("Analyze Deal", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
