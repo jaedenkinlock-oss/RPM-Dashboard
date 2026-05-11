@@ -403,11 +403,17 @@ section[data-testid="stMain"] > div {{ padding: 0 !important; }}
 [data-testid="stForm"] [data-testid="stMarkdownContainer"] strong {{
   color: {RPM_BLACK} !important;
 }}
-/* ── Deal Analyzer: white text on the Analyze Deal submit button ───────────── */
-[data-testid="stFormSubmitButton"] button,
-[data-testid="stFormSubmitButton"] button p,
-[data-testid="stFormSubmitButton"] button span {{
+/* ── Deal Analyzer: Analyze Deal button — dark bg, white text ──────────────── */
+#root [data-testid="stFormSubmitButton"] button,
+#root [data-testid="stFormSubmitButton"] button *,
+#root [data-testid="stFormSubmitButton"] button p,
+#root [data-testid="stFormSubmitButton"] button span,
+#root [data-testid="stFormSubmitButton"] button div {{
   color: #ffffff !important;
+}}
+#root [data-testid="stFormSubmitButton"] button {{
+  background-color: {RPM_BLACK} !important;
+  border-color: {RPM_BLACK} !important;
 }}
 /* ── Deal Analyzer: dark text for the scoring methodology expander ─────────── */
 [data-testid="stExpander"] summary,
@@ -1482,21 +1488,32 @@ with tab_deal:
                                             value=TREASURY_10Y_REF, step=0.05, format="%.2f",
                                             help=f"Default: {TREASURY_10Y_REF}% (Q1 2026 proxy). Update to current rate for live analysis.")
 
-            st.markdown("""
-<style>
-button[kind="primaryFormSubmit"], button[kind="primaryFormSubmit"] * {
-  color: #ffffff !important;
-}
-[data-testid="stFormSubmitButton"] button,
-[data-testid="stFormSubmitButton"] button *,
-[data-testid="stFormSubmitButton"] p,
-[data-testid="stFormSubmitButton"] span {
-  color: #ffffff !important;
-}
-</style>
-""", unsafe_allow_html=True)
             submitted = st.form_submit_button("Analyze Deal", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
+
+    import streamlit.components.v1 as _components
+    _components.html("""
+<script>
+(function() {
+  function paint() {
+    var doc = window.parent.document;
+    var btns = doc.querySelectorAll('[data-testid="stFormSubmitButton"] button');
+    btns.forEach(function(btn) {
+      btn.style.setProperty('background-color', '#1a1a1a', 'important');
+      btn.style.setProperty('border-color', '#1a1a1a', 'important');
+      btn.style.setProperty('color', '#ffffff', 'important');
+      btn.querySelectorAll('*').forEach(function(el) {
+        el.style.setProperty('color', '#ffffff', 'important');
+      });
+    });
+  }
+  paint();
+  setTimeout(paint, 300);
+  setTimeout(paint, 800);
+  setTimeout(paint, 1500);
+})();
+</script>
+""", height=1)
 
     with col_result:
         if submitted:
