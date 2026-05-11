@@ -396,33 +396,11 @@ section[data-testid="stMain"] > div {{ padding: 0 !important; }}
   color: #888; font-size: 12px; padding: 24px 0; text-align: center;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }}
-/* ── Force dark text on light tab backgrounds ─────────────────────────────── */
-.stTabs [data-baseweb="tab-panel"] {{
-  color: {RPM_BLACK} !important;
-}}
-.stTabs [data-baseweb="tab-panel"] p,
-.stTabs [data-baseweb="tab-panel"] label,
-.stTabs [data-baseweb="tab-panel"] [data-testid="stWidgetLabel"] p,
-.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] p,
-.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] li,
-.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] strong,
-.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] td,
-.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] th {{
-  color: {RPM_BLACK} !important;
-}}
-[data-testid="stForm"] p,
-[data-testid="stForm"] label,
-[data-testid="stForm"] input,
-[data-testid="stForm"] textarea,
+/* ── Deal Analyzer: dark text for form input labels only ──────────────────── */
 [data-testid="stForm"] [data-testid="stWidgetLabel"] p,
+[data-testid="stForm"] [data-testid="stWidgetLabel"] label,
 [data-testid="stForm"] [data-testid="stMarkdownContainer"] p,
 [data-testid="stForm"] [data-testid="stMarkdownContainer"] strong {{
-  color: {RPM_BLACK} !important;
-}}
-[data-testid="stExpander"] [data-testid="stMarkdownContainer"] p,
-[data-testid="stExpander"] [data-testid="stMarkdownContainer"] td,
-[data-testid="stExpander"] [data-testid="stMarkdownContainer"] th,
-[data-testid="stExpander"] [data-testid="stMarkdownContainer"] li {{
   color: {RPM_BLACK} !important;
 }}
 </style>
