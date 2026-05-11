@@ -403,6 +403,22 @@ section[data-testid="stMain"] > div {{ padding: 0 !important; }}
 [data-testid="stForm"] [data-testid="stMarkdownContainer"] strong {{
   color: {RPM_BLACK} !important;
 }}
+/* ── Deal Analyzer: white text on the Analyze Deal submit button ───────────── */
+[data-testid="stFormSubmitButton"] button,
+[data-testid="stFormSubmitButton"] button p {{
+  color: #ffffff !important;
+}}
+/* ── Deal Analyzer: dark text for the scoring methodology expander ─────────── */
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] summary span,
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] td,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] th,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] li,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] em {{
+  color: {RPM_BLACK} !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
