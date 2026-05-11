@@ -405,7 +405,8 @@ section[data-testid="stMain"] > div {{ padding: 0 !important; }}
 }}
 /* ── Deal Analyzer: white text on the Analyze Deal submit button ───────────── */
 [data-testid="stFormSubmitButton"] button,
-[data-testid="stFormSubmitButton"] button p {{
+[data-testid="stFormSubmitButton"] button p,
+[data-testid="stFormSubmitButton"] button span {{
   color: #ffffff !important;
 }}
 /* ── Deal Analyzer: dark text for the scoring methodology expander ─────────── */
