@@ -1,5 +1,11 @@
+import sys, os
+_root = os.path.dirname(os.path.abspath(__file__))
+for _p in (_root, os.path.join(_root, "src")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -7,17 +13,17 @@ from config import (
     RPM_BLACK, RPM_DARK, RPM_GOLD, RPM_GOLD_LT, RPM_LIGHT, RPM_BORDER,
     RPM_MID, RPM_AMBER, RPM_GREEN, RPM_RED, RPM_GREEN_LT, RPM_RED_LT, RPM_AMBER_LT,
 )
-from src.fetchers.yfinance_fetcher import fetch_all_fundamentals
-from src.fetchers.rss_fetcher import fetch_news
+from fetchers.yfinance_fetcher import fetch_all_fundamentals
+from fetchers.rss_fetcher import fetch_news
 try:
-    from src.fetchers.rss_fetcher import fetch_ticker_news
+    from fetchers.rss_fetcher import fetch_ticker_news
 except ImportError:
     def fetch_ticker_news(tickers, max_per_ticker=3):  # fallback if module not yet deployed
         return {t: [] for t in tickers}
-from src.processors.fundamentals import build_fundamentals_table
-from src.processors.deal_scorer import score_deal, MARKET_DATA, TREASURY_10Y_REF
-from src.utils.cache import cache_timestamp
-from src.utils.formatters import fmt_large, fmt_pct, fmt_multiple
+from processors.fundamentals import build_fundamentals_table
+from processors.deal_scorer import score_deal, MARKET_DATA, TREASURY_10Y_REF
+from utils.cache import cache_timestamp
+from utils.formatters import fmt_large, fmt_pct, fmt_multiple
 
 st.set_page_config(
     page_title="RPM Living Dashboard — Multifamily REIT Intelligence · Jaeden Kinlock",
@@ -390,13 +396,42 @@ section[data-testid="stMain"] > div {{ padding: 0 !important; }}
   color: #888; font-size: 12px; padding: 24px 0; text-align: center;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }}
+/* ── Force dark text on light tab backgrounds ─────────────────────────────── */
+.stTabs [data-baseweb="tab-panel"] {{
+  color: {RPM_BLACK} !important;
+}}
+.stTabs [data-baseweb="tab-panel"] p,
+.stTabs [data-baseweb="tab-panel"] label,
+.stTabs [data-baseweb="tab-panel"] [data-testid="stWidgetLabel"] p,
+.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] p,
+.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] li,
+.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] strong,
+.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] td,
+.stTabs [data-baseweb="tab-panel"] [data-testid="stMarkdownContainer"] th {{
+  color: {RPM_BLACK} !important;
+}}
+[data-testid="stForm"] p,
+[data-testid="stForm"] label,
+[data-testid="stForm"] input,
+[data-testid="stForm"] textarea,
+[data-testid="stForm"] [data-testid="stWidgetLabel"] p,
+[data-testid="stForm"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stForm"] [data-testid="stMarkdownContainer"] strong {{
+  color: {RPM_BLACK} !important;
+}}
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] td,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] th,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] li {{
+  color: {RPM_BLACK} !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 
-ts = cache_timestamp("reit_fundamentals") or datetime.utcnow().strftime("%B %d, %Y")
+ts = cache_timestamp("reit_fundamentals") or datetime.now(timezone.utc).strftime("%B %d, %Y")
 
 st.markdown(f"""
 <div class="rpm-header">
@@ -530,7 +565,7 @@ with tab_thesis:
 
         "Loss-to-Lease Capture": """<p>Loss-to-lease is the difference between what a current tenant pays and what a new lease in the same unit would command today. That gap is contractual rent upside — it materializes automatically as units turn, with no reliance on market rent growth.</p>
 <ul>
-  <li><strong>Current spreads:</strong> Austin rents are running 8–12% below market; Nashville and Dallas are 10–14% below (CoStar, Q4 2024)</li>
+  <li><strong>Current spreads:</strong> Austin rents are running 5–8% below market; Nashville and Dallas are 7–10% below (Yardi Matrix, Q1 2026)</li>
   <li><strong>What it means in dollars:</strong> A 300-unit property with 12% loss-to-lease at normal turnover generates an estimated $400,000+ in incremental annual income as leases reset</li>
   <li><strong>Execution advantage:</strong> RPM's in-house leasing teams re-lease vacated units 30–60 days faster than properties managed by third parties</li>
 </ul>""",
@@ -639,239 +674,239 @@ with tab_thesis:
 
 with tab_reits:
     if df.empty:
-        st.error("No REIT data. Run: python3 -m src.fetchers.yfinance_fetcher")
-        st.stop()
+        st.warning("REIT data unavailable — yfinance fetch failed. Data will refresh automatically on next load.")
+    else:
 
-    mf = df[df["category"] == "Multifamily"]
+        mf = df[df["category"] == "Multifamily"]
 
-    st.markdown(
-        '<div class="sec-lbl">REIT universe &nbsp;&middot;&nbsp; multifamily · SFR · homebuilders &nbsp;&middot;&nbsp; live yfinance data</div>',
-        unsafe_allow_html=True,
-    )
-
-    # ── Hero stat strip ───────────────────────────────────────────────────────
-    _mf_n    = len(mf)
-    _mf_mc   = mf["market_cap"].sum()
-    _mf_dy   = mf["div_yield"].mean()
-    _mf_pffo = mf["p_ffo"].median()
-    _mf_ndeb = mf["net_debt_ebitda"].median()
-    _mf_hr   = int((df["payout_flag"] == "red").sum())
-    _mf_mod  = int((df["payout_flag"] == "yellow").sum())
-
-    st.markdown(f"""
-    <div class="mi-stats" style="margin-bottom:16px;">
-      <div class="mi-stat">
-        <div class="mi-stat-val">{_mf_n}</div>
-        <div class="mi-stat-lbl">Multifamily REITs</div>
-        <div class="mi-stat-src">Universe</div>
-      </div>
-      <div class="mi-stat">
-        <div class="mi-stat-val">{fmt_large(_mf_mc)}</div>
-        <div class="mi-stat-lbl">Combined Market Cap</div>
-        <div class="mi-stat-src">Multifamily only</div>
-      </div>
-      <div class="mi-stat">
-        <div class="mi-stat-val" style="color:var(--rpm-gold);">{fmt_pct(_mf_dy) if _mf_dy == _mf_dy else '—'}</div>
-        <div class="mi-stat-lbl">Avg Dividend Yield</div>
-        <div class="mi-stat-src">Multifamily average</div>
-      </div>
-      <div class="mi-stat">
-        <div class="mi-stat-val" style="color:var(--rpm-gold);">{fmt_multiple(_mf_pffo) if _mf_pffo == _mf_pffo else '—'}</div>
-        <div class="mi-stat-lbl">Median P / FFO [est.]</div>
-        <div class="mi-stat-src">Net Income + D&amp;A proxy</div>
-      </div>
-      <div class="mi-stat">
-        <div class="mi-stat-val" style="color:var(--rpm-gold);">{f'{_mf_ndeb:.1f}x' if _mf_ndeb == _mf_ndeb else '—'}</div>
-        <div class="mi-stat-lbl">Median ND / EBITDA</div>
-        <div class="mi-stat-src">Leverage — multifamily</div>
-      </div>
-      <div class="mi-stat">
-        <div class="mi-stat-val {'neg' if _mf_hr > 0 else ''}" style="font-size:18px;font-weight:300;">
-          {_mf_hr} High · {_mf_mod} Mod
-        </div>
-        <div class="mi-stat-lbl">Payout Risk Flags</div>
-        <div class="mi-stat-src">Full universe</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ── Filters — pill bars ───────────────────────────────────────────────────
-    _all_cats = sorted(df["category"].unique().tolist())
-    _cat_sel = st.pills(
-        "Category",
-        _all_cats,
-        selection_mode="multi",
-        default=["Multifamily", "SFR/BTR"],
-        key="reit_cats",
-    )
-
-    _RISK_OPTS  = ["Low Risk", "Moderate", "High Risk", "N/A"]
-    _RISK_MAP   = {"Low Risk": "ok", "Moderate": "yellow", "High Risk": "red", "N/A": "na"}
-    _risk_sel = st.pills(
-        "Payout Risk",
-        _RISK_OPTS,
-        selection_mode="multi",
-        default=_RISK_OPTS,
-        key="reit_risk",
-    )
-
-    # Sort + ticker row
-    _SORT_MAP = {
-        "Market Cap":        "market_cap",
-        "Dividend Yield":    "div_yield",
-        "P/FFO [est.]":      "p_ffo",
-        "Payout Ratio":      "payout_ratio",
-        "Net Debt / EBITDA": "net_debt_ebitda",
-    }
-    _sf1, _sf2 = st.columns([1, 2])
-    with _sf1:
-        _sort_label = st.selectbox("Sort By", list(_SORT_MAP.keys()), key="reit_sort")
-    with _sf2:
-        _tick_sel = st.selectbox(
-            "Ticker detail",
-            options=["— select ticker —"] + sorted(df.index.tolist()),
-            key="reit_ticker",
+        st.markdown(
+            '<div class="sec-lbl">REIT universe &nbsp;&middot;&nbsp; multifamily · SFR · homebuilders &nbsp;&middot;&nbsp; live yfinance data</div>',
+            unsafe_allow_html=True,
         )
 
-    # ── Apply filters ─────────────────────────────────────────────────────────
-    _cats_active = _cat_sel if _cat_sel else _all_cats
-    _risk_active = [_RISK_MAP[l] for l in (_risk_sel if _risk_sel else _RISK_OPTS)]
-    _sort_col    = _SORT_MAP[_sort_label]
-
-    filtered = df[df["category"].isin(_cats_active) & df["payout_flag"].isin(_risk_active)]
-    if _sort_col in filtered.columns:
-        filtered = filtered.sort_values(_sort_col, ascending=False)
-
-    st.markdown(
-        f'<div class="sec-lbl" style="margin-top:4px;">{len(filtered)} tickers shown &nbsp;&middot;&nbsp; '
-        'FFO [est.] = Net Income TTM + D&amp;A TTM &nbsp;&middot;&nbsp; EDGAR ground truth: Phase 2</div>',
-        unsafe_allow_html=True,
-    )
-
-    # ── Data table ────────────────────────────────────────────────────────────
-    display = pd.DataFrame({
-        "Company":       filtered["name"],
-        "Category":      filtered["category"],
-        "Price":         filtered["price"].map(lambda x: f"${x:.2f}" if x == x else "—"),
-        "Market Cap":    filtered["market_cap"].map(fmt_large),
-        "Div Yield":     filtered["div_yield"].map(lambda x: fmt_pct(x) if x == x else "—"),
-        "Annual Div":    filtered["div_rate"].map(lambda x: f"${x:.2f}" if x == x else "—"),
-        "Payout Ratio":  filtered["payout_ratio"].map(lambda x: fmt_pct(x) if x == x else "—"),
-        "Payout Risk":   filtered["payout_flag"].map(_flag_text),
-        "FFO/Sh [est.]": filtered["ffo_per_share"].map(lambda x: f"${x:.2f}" if x == x else "—"),
-        "P/FFO [est.]":  filtered["p_ffo"].map(lambda x: fmt_multiple(x) if x == x else "—"),
-        "ND/EBITDA":     filtered["net_debt_ebitda"].map(lambda x: f"{x:.1f}x" if x == x else "—"),
-        "Lev Risk":      filtered["leverage_flag"].map(_flag_text),
-        "52W High":      filtered["week52_high"].map(lambda x: f"${x:.2f}" if x == x else "—"),
-        "vs 52W High":   filtered["pct_from_52w_high"].map(lambda x: fmt_pct(x) if x == x else "—"),
-    }, index=filtered.index)
-
-    st.dataframe(display, use_container_width=True, height=440)
-
-    st.markdown(
-        f'<div class="src-bar">Source: yfinance &nbsp;&middot;&nbsp; {ts} &nbsp;&middot;&nbsp; '
-        'Moderate = payout &gt;90% &nbsp;&middot;&nbsp; High Risk = payout &gt;100% &nbsp;&middot;&nbsp; '
-        'Leverage moderate = ND/EBITDA &gt;7x &nbsp;&middot;&nbsp; High Risk = &gt;9x</div>',
-        unsafe_allow_html=True,
-    )
-
-    # ── Methodology note ──────────────────────────────────────────────────────
-    st.markdown("""
-    <div class="insight-box" style="margin-top:10px;">
-      <h5>Methodology</h5>
-      <ul>
-        <li><strong>P/FFO [est.]</strong> — Price / (Net Income TTM + D&amp;A TTM). True FFO requires EDGAR 10-K/10-Q adjustment for gains on sales and straight-line rent. EDGAR integration in Phase 2.</li>
-        <li><strong>Payout ratio</strong> — Annual dividends / Earnings (yfinance <code>payoutRatio</code>). Approximates AFFO payout. Moderate = &gt;90%, High Risk = &gt;100%.</li>
-        <li><strong>ND/EBITDA</strong> — (Total Debt − Cash) / EBITDA. Moderate = &gt;7x, High Risk = &gt;9x.</li>
-        <li><strong>Dividend yield</strong> — Annual dividend rate / current price (trailing).</li>
-      </ul>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ── Ticker detail panel ───────────────────────────────────────────────────
-    if _tick_sel != "— select ticker —" and _tick_sel in df.index:
-        row = df.loc[_tick_sel]
-        cat = row.get("category", "—")
-
-        def _v(x, fmt=None):
-            if x is None or (isinstance(x, float) and x != x): return "—"
-            return fmt(x) if fmt else str(x)
-
-        pb = row.get("payout_flag", "na")
-        lb = row.get("leverage_flag", "na")
+        # ── Hero stat strip ───────────────────────────────────────────────────────
+        _mf_n    = len(mf)
+        _mf_mc   = mf["market_cap"].sum()
+        _mf_dy   = mf["div_yield"].mean()
+        _mf_pffo = mf["p_ffo"].median()
+        _mf_ndeb = mf["net_debt_ebitda"].median()
+        _mf_hr   = int((df["payout_flag"] == "red").sum())
+        _mf_mod  = int((df["payout_flag"] == "yellow").sum())
 
         st.markdown(f"""
-        <div class="reit-detail">
-          <div class="reit-detail-title">{_tick_sel} — {row.get('name','—')} &nbsp;&middot;&nbsp; {cat}</div>
-          <div class="reit-kv-grid">
-            <div class="reit-kv"><div class="reit-kv-lbl">Current Price</div><div class="reit-kv-val">{_v(row.get('price'), lambda x: f'${x:.2f}')}</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">Market Cap</div><div class="reit-kv-val">{_v(row.get('market_cap'), fmt_large)}</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">Dividend Yield</div><div class="reit-kv-val">{_v(row.get('div_yield'), fmt_pct)}</div><div class="reit-kv-note">Annual: {_v(row.get('div_rate'), lambda x: f'${x:.2f}')}/sh</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">Payout Ratio</div><div class="reit-kv-val">{_v(row.get('payout_ratio'), fmt_pct)}</div><div class="reit-kv-note">{_flag_badge(pb)}</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">FFO / Share [est.]</div><div class="reit-kv-val">{_v(row.get('ffo_per_share'), lambda x: f'${x:.2f}')}</div><div class="reit-kv-note">Net Income + D&amp;A proxy</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">P / FFO [est.]</div><div class="reit-kv-val">{_v(row.get('p_ffo'), fmt_multiple)}</div><div class="reit-kv-note">EDGAR ground truth: Phase 2</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">Forward EPS</div><div class="reit-kv-val">{_v(row.get('forward_eps'), lambda x: f'${x:.2f}')}</div><div class="reit-kv-note">Fwd P/E: {_v(row.get('forward_pe'), lambda x: f'{x:.1f}x')}</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">Net Debt / EBITDA</div><div class="reit-kv-val">{_v(row.get('net_debt_ebitda'), lambda x: f'{x:.1f}x')}</div><div class="reit-kv-note">{_flag_badge(lb)}</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">Revenue (TTM)</div><div class="reit-kv-val">{_v(row.get('revenue_ttm'), fmt_large)}</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">EBITDA (TTM)</div><div class="reit-kv-val">{_v(row.get('ebitda'), fmt_large)}</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">52-Week High</div><div class="reit-kv-val">{_v(row.get('week52_high'), lambda x: f'${x:.2f}')}</div></div>
-            <div class="reit-kv"><div class="reit-kv-lbl">52-Week Low</div><div class="reit-kv-val">{_v(row.get('week52_low'), lambda x: f'${x:.2f}')}</div></div>
+        <div class="mi-stats" style="margin-bottom:16px;">
+          <div class="mi-stat">
+            <div class="mi-stat-val">{_mf_n}</div>
+            <div class="mi-stat-lbl">Multifamily REITs</div>
+            <div class="mi-stat-src">Universe</div>
+          </div>
+          <div class="mi-stat">
+            <div class="mi-stat-val">{fmt_large(_mf_mc)}</div>
+            <div class="mi-stat-lbl">Combined Market Cap</div>
+            <div class="mi-stat-src">Multifamily only</div>
+          </div>
+          <div class="mi-stat">
+            <div class="mi-stat-val" style="color:var(--rpm-gold);">{fmt_pct(_mf_dy) if _mf_dy == _mf_dy else '—'}</div>
+            <div class="mi-stat-lbl">Avg Dividend Yield</div>
+            <div class="mi-stat-src">Multifamily average</div>
+          </div>
+          <div class="mi-stat">
+            <div class="mi-stat-val" style="color:var(--rpm-gold);">{fmt_multiple(_mf_pffo) if _mf_pffo == _mf_pffo else '—'}</div>
+            <div class="mi-stat-lbl">Median P / FFO [est.]</div>
+            <div class="mi-stat-src">Net Income + D&amp;A proxy</div>
+          </div>
+          <div class="mi-stat">
+            <div class="mi-stat-val" style="color:var(--rpm-gold);">{f'{_mf_ndeb:.1f}x' if _mf_ndeb == _mf_ndeb else '—'}</div>
+            <div class="mi-stat-lbl">Median ND / EBITDA</div>
+            <div class="mi-stat-src">Leverage — multifamily</div>
+          </div>
+          <div class="mi-stat">
+            <div class="mi-stat-val {'neg' if _mf_hr > 0 else ''}" style="font-size:18px;font-weight:300;">
+              {_mf_hr} High · {_mf_mod} Mod
+            </div>
+            <div class="mi-stat-lbl">Payout Risk Flags</div>
+            <div class="mi-stat-src">Full universe</div>
           </div>
         </div>
-        <div class="src-bar" style="margin-top:6px;">Source: yfinance &nbsp;&middot;&nbsp; {ts} &nbsp;&middot;&nbsp; FFO [est.] = Net Income TTM + D&amp;A TTM &nbsp;&middot;&nbsp; EDGAR 10-K/10-Q FFO in Phase 2.</div>
         """, unsafe_allow_html=True)
 
-        # ── RSS quote verification ─────────────────────────────────────────────
-        with st.spinner(""):
-            _ticker_news = fetch_ticker_news([_tick_sel], max_per_ticker=4)
-        _tn = _ticker_news.get(_tick_sel, [])
+        # ── Filters — pill bars ───────────────────────────────────────────────────
+        _all_cats = sorted(df["category"].unique().tolist())
+        _cat_sel = st.pills(
+            "Category",
+            _all_cats,
+            selection_mode="multi",
+            default=["Multifamily", "SFR/BTR"],
+            key="reit_cats",
+        )
 
-        if _tn:
-            _now = datetime.utcnow()
-            _most_recent = _tn[0]["date"].replace(tzinfo=None) if _tn[0]["date"].tzinfo else _tn[0]["date"]
-            _age_hours = (_now - _most_recent).total_seconds() / 3600
-            _freshness = (
-                "Live — within 6 hours" if _age_hours < 6 else
-                "Recent — within 24 hours" if _age_hours < 24 else
-                f"Last coverage {int(_age_hours / 24)}d ago"
+        _RISK_OPTS  = ["Low Risk", "Moderate", "High Risk", "N/A"]
+        _RISK_MAP   = {"Low Risk": "ok", "Moderate": "yellow", "High Risk": "red", "N/A": "na"}
+        _risk_sel = st.pills(
+            "Payout Risk",
+            _RISK_OPTS,
+            selection_mode="multi",
+            default=_RISK_OPTS,
+            key="reit_risk",
+        )
+
+        # Sort + ticker row
+        _SORT_MAP = {
+            "Market Cap":        "market_cap",
+            "Dividend Yield":    "div_yield",
+            "P/FFO [est.]":      "p_ffo",
+            "Payout Ratio":      "payout_ratio",
+            "Net Debt / EBITDA": "net_debt_ebitda",
+        }
+        _sf1, _sf2 = st.columns([1, 2])
+        with _sf1:
+            _sort_label = st.selectbox("Sort By", list(_SORT_MAP.keys()), key="reit_sort")
+        with _sf2:
+            _tick_sel = st.selectbox(
+                "Ticker detail",
+                options=["— select ticker —"] + sorted(df.index.tolist()),
+                key="reit_ticker",
             )
-            _fresh_color = "#5a9e70" if _age_hours < 24 else "#999"
-            headlines_html = "".join([
-                f'<div style="padding:7px 0;border-bottom:1px solid #f0ede7;">'
-                f'<a href="{a["link"]}" target="_blank" style="font-size:12px;color:#111;text-decoration:none;line-height:1.45;">'
-                f'{a["title"]}</a>'
-                f'<span style="font-size:10px;color:#999;margin-left:8px;">'
-                f'{a["date"].strftime("%b %d") if a["date"] else ""}</span>'
-                f'</div>'
-                for a in _tn
-            ])
+
+        # ── Apply filters ─────────────────────────────────────────────────────────
+        _cats_active = _cat_sel if _cat_sel else _all_cats
+        _risk_active = [_RISK_MAP[l] for l in (_risk_sel if _risk_sel else _RISK_OPTS)]
+        _sort_col    = _SORT_MAP[_sort_label]
+
+        filtered = df[df["category"].isin(_cats_active) & df["payout_flag"].isin(_risk_active)]
+        if _sort_col in filtered.columns:
+            filtered = filtered.sort_values(_sort_col, ascending=False)
+
+        st.markdown(
+            f'<div class="sec-lbl" style="margin-top:4px;">{len(filtered)} tickers shown &nbsp;&middot;&nbsp; '
+            'FFO [est.] = Net Income TTM + D&amp;A TTM &nbsp;&middot;&nbsp; EDGAR ground truth: Phase 2</div>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Data table ────────────────────────────────────────────────────────────
+        display = pd.DataFrame({
+            "Company":       filtered["name"],
+            "Category":      filtered["category"],
+            "Price":         filtered["price"].map(lambda x: f"${x:.2f}" if x == x else "—"),
+            "Market Cap":    filtered["market_cap"].map(fmt_large),
+            "Div Yield":     filtered["div_yield"].map(lambda x: fmt_pct(x) if x == x else "—"),
+            "Annual Div":    filtered["div_rate"].map(lambda x: f"${x:.2f}" if x == x else "—"),
+            "Payout Ratio":  filtered["payout_ratio"].map(lambda x: fmt_pct(x) if x == x else "—"),
+            "Payout Risk":   filtered["payout_flag"].map(_flag_text),
+            "FFO/Sh [est.]": filtered["ffo_per_share"].map(lambda x: f"${x:.2f}" if x == x else "—"),
+            "P/FFO [est.]":  filtered["p_ffo"].map(lambda x: fmt_multiple(x) if x == x else "—"),
+            "ND/EBITDA":     filtered["net_debt_ebitda"].map(lambda x: f"{x:.1f}x" if x == x else "—"),
+            "Lev Risk":      filtered["leverage_flag"].map(_flag_text),
+            "52W High":      filtered["week52_high"].map(lambda x: f"${x:.2f}" if x == x else "—"),
+            "vs 52W High":   filtered["pct_from_52w_high"].map(lambda x: fmt_pct(x) if x == x else "—"),
+        }, index=filtered.index)
+
+        st.dataframe(display, use_container_width=True, height=440)
+
+        st.markdown(
+            f'<div class="src-bar">Source: yfinance &nbsp;&middot;&nbsp; {ts} &nbsp;&middot;&nbsp; '
+            'Moderate = payout &gt;90% &nbsp;&middot;&nbsp; High Risk = payout &gt;100% &nbsp;&middot;&nbsp; '
+            'Leverage moderate = ND/EBITDA &gt;7x &nbsp;&middot;&nbsp; High Risk = &gt;9x</div>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Methodology note ──────────────────────────────────────────────────────
+        st.markdown("""
+        <div class="insight-box" style="margin-top:10px;">
+          <h5>Methodology</h5>
+          <ul>
+            <li><strong>P/FFO [est.]</strong> — Price / (Net Income TTM + D&amp;A TTM). True FFO requires EDGAR 10-K/10-Q adjustment for gains on sales and straight-line rent. EDGAR integration in Phase 2.</li>
+            <li><strong>Payout ratio</strong> — Annual dividends / Earnings (yfinance <code>payoutRatio</code>). Approximates AFFO payout. Moderate = &gt;90%, High Risk = &gt;100%.</li>
+            <li><strong>ND/EBITDA</strong> — (Total Debt − Cash) / EBITDA. Moderate = &gt;7x, High Risk = &gt;9x.</li>
+            <li><strong>Dividend yield</strong> — Annual dividend rate / current price (trailing).</li>
+          </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── Ticker detail panel ───────────────────────────────────────────────────
+        if _tick_sel != "— select ticker —" and _tick_sel in df.index:
+            row = df.loc[_tick_sel]
+            cat = row.get("category", "—")
+
+            def _v(x, fmt=None):
+                if x is None or (isinstance(x, float) and x != x): return "—"
+                return fmt(x) if fmt else str(x)
+
+            pb = row.get("payout_flag", "na")
+            lb = row.get("leverage_flag", "na")
+
             st.markdown(f"""
-            <div style="background:#fff;border:0.5px solid #ddd;border-left:3px solid {_fresh_color};
-                 padding:12px 16px;margin-top:6px;
-                 font-family:'Helvetica Neue',Arial,sans-serif;">
-              <div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
-                   font-weight:600;color:{_fresh_color};margin-bottom:8px;">
-                Yahoo Finance — {_tick_sel} Recent Coverage &nbsp;·&nbsp; {_freshness}
+            <div class="reit-detail">
+              <div class="reit-detail-title">{_tick_sel} — {row.get('name','—')} &nbsp;&middot;&nbsp; {cat}</div>
+              <div class="reit-kv-grid">
+                <div class="reit-kv"><div class="reit-kv-lbl">Current Price</div><div class="reit-kv-val">{_v(row.get('price'), lambda x: f'${x:.2f}')}</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">Market Cap</div><div class="reit-kv-val">{_v(row.get('market_cap'), fmt_large)}</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">Dividend Yield</div><div class="reit-kv-val">{_v(row.get('div_yield'), fmt_pct)}</div><div class="reit-kv-note">Annual: {_v(row.get('div_rate'), lambda x: f'${x:.2f}')}/sh</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">Payout Ratio</div><div class="reit-kv-val">{_v(row.get('payout_ratio'), fmt_pct)}</div><div class="reit-kv-note">{_flag_badge(pb)}</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">FFO / Share [est.]</div><div class="reit-kv-val">{_v(row.get('ffo_per_share'), lambda x: f'${x:.2f}')}</div><div class="reit-kv-note">Net Income + D&amp;A proxy</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">P / FFO [est.]</div><div class="reit-kv-val">{_v(row.get('p_ffo'), fmt_multiple)}</div><div class="reit-kv-note">EDGAR ground truth: Phase 2</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">Forward EPS</div><div class="reit-kv-val">{_v(row.get('forward_eps'), lambda x: f'${x:.2f}')}</div><div class="reit-kv-note">Fwd P/E: {_v(row.get('forward_pe'), lambda x: f'{x:.1f}x')}</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">Net Debt / EBITDA</div><div class="reit-kv-val">{_v(row.get('net_debt_ebitda'), lambda x: f'{x:.1f}x')}</div><div class="reit-kv-note">{_flag_badge(lb)}</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">Revenue (TTM)</div><div class="reit-kv-val">{_v(row.get('revenue_ttm'), fmt_large)}</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">EBITDA (TTM)</div><div class="reit-kv-val">{_v(row.get('ebitda'), fmt_large)}</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">52-Week High</div><div class="reit-kv-val">{_v(row.get('week52_high'), lambda x: f'${x:.2f}')}</div></div>
+                <div class="reit-kv"><div class="reit-kv-lbl">52-Week Low</div><div class="reit-kv-val">{_v(row.get('week52_low'), lambda x: f'${x:.2f}')}</div></div>
               </div>
-              {headlines_html}
             </div>
+            <div class="src-bar" style="margin-top:6px;">Source: yfinance &nbsp;&middot;&nbsp; {ts} &nbsp;&middot;&nbsp; FFO [est.] = Net Income TTM + D&amp;A TTM &nbsp;&middot;&nbsp; EDGAR 10-K/10-Q FFO in Phase 2.</div>
             """, unsafe_allow_html=True)
-        else:
-            st.markdown(
-                f'<div style="font-size:11px;color:#999;padding:8px 0;">'
-                f'No recent RSS headlines found for {_tick_sel} — price data sourced from yfinance ({ts}).</div>',
-                unsafe_allow_html=True,
-            )
 
-    with st.expander("Raw data — all columns"):
-        st.dataframe(filtered, use_container_width=True)
+            # ── RSS quote verification ─────────────────────────────────────────────
+            with st.spinner(""):
+                _ticker_news = fetch_ticker_news([_tick_sel], max_per_ticker=4)
+            _tn = _ticker_news.get(_tick_sel, [])
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — Market Intelligence
-# ══════════════════════════════════════════════════════════════════════════════
+            if _tn:
+                _now = datetime.now(timezone.utc).replace(tzinfo=None)
+                _most_recent = _tn[0]["date"].replace(tzinfo=None) if _tn[0]["date"].tzinfo else _tn[0]["date"]
+                _age_hours = (_now - _most_recent).total_seconds() / 3600
+                _freshness = (
+                    "Live — within 6 hours" if _age_hours < 6 else
+                    "Recent — within 24 hours" if _age_hours < 24 else
+                    f"Last coverage {int(_age_hours / 24)}d ago"
+                )
+                _fresh_color = "#5a9e70" if _age_hours < 24 else "#999"
+                headlines_html = "".join([
+                    f'<div style="padding:7px 0;border-bottom:1px solid #f0ede7;">'
+                    f'<a href="{a["link"]}" target="_blank" style="font-size:12px;color:#111;text-decoration:none;line-height:1.45;">'
+                    f'{a["title"]}</a>'
+                    f'<span style="font-size:10px;color:#999;margin-left:8px;">'
+                    f'{a["date"].strftime("%b %d") if a["date"] else ""}</span>'
+                    f'</div>'
+                    for a in _tn
+                ])
+                st.markdown(f"""
+                <div style="background:#fff;border:0.5px solid #ddd;border-left:3px solid {_fresh_color};
+                     padding:12px 16px;margin-top:6px;
+                     font-family:'Helvetica Neue',Arial,sans-serif;">
+                  <div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
+                       font-weight:600;color:{_fresh_color};margin-bottom:8px;">
+                    Yahoo Finance — {_tick_sel} Recent Coverage &nbsp;·&nbsp; {_freshness}
+                  </div>
+                  {headlines_html}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(
+                    f'<div style="font-size:11px;color:#999;padding:8px 0;">'
+                    f'No recent RSS headlines found for {_tick_sel} — price data sourced from yfinance ({ts}).</div>',
+                    unsafe_allow_html=True,
+                )
+
+        with st.expander("Raw data — all columns"):
+            st.dataframe(filtered, use_container_width=True)
+
+    # ══════════════════════════════════════════════════════════════════════════════
+    # TAB 3 — Market Intelligence
+    # ══════════════════════════════════════════════════════════════════════════════
 
 with tab_markets:
-    st.markdown('<div class="sec-lbl">RPM Living target markets &nbsp;&middot;&nbsp; multifamily fundamentals &nbsp;&middot;&nbsp; data as of Q4 2024 &ndash; Q1 2025 &nbsp;&middot;&nbsp; live FRED integration Phase 2</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-lbl">RPM Living target markets &nbsp;&middot;&nbsp; multifamily fundamentals &nbsp;&middot;&nbsp; data as of Q1 2026 &nbsp;&middot;&nbsp; live FRED integration Phase 2</div>', unsafe_allow_html=True)
 
     # ── Market coordinates for Plotly map ──────────────────────────────────────
     _MARKET_COORDS = {
@@ -910,348 +945,348 @@ with tab_markets:
     T1_MARKETS = [
         {
             "name": "Austin, TX",
-            "expander": "Austin, TX  —  Tier 1 Core  ·  8.5% Vacancy  ·  −3.2% Rent Growth YOY",
+            "expander": "Austin, TX  —  Tier 1 Core  ·  7.2% Vacancy  ·  +0.8% Rent Growth YOY",
             "subtitle": "Value-Add · Supply Peak Passing · Tech Employment Anchor · RPM Headquarters Market",
             "stats": [
-                {"val": "8.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024 — elevated, supply-driven", "cls": "neg"},
-                {"val": "$1,648", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "−3.2%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix — new luxury supply pressure", "cls": "neg"},
-                {"val": "23,450", "label": "Units Under Construction",  "src": "CoStar Q4 2024 — peak; pipeline thins 2026"},
-                {"val": "+2.3%",  "label": "Job Growth YOY",            "src": "BLS 2024 — Tesla, Samsung, Apple, Oracle", "cls": "pos"},
-                {"val": "+25K",   "label": "Net In-Migration / Yr",     "src": "Census ACS 2023 — among highest nationally"},
-                {"val": "18,000", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "7.2%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — improving as peak supply absorbed", "cls": "neg"},
+                {"val": "$1,695", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+0.8%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — recovery underway as pipeline clears", "cls": "pos"},
+                {"val": "10,800", "label": "Units Under Construction",  "src": "CoStar Q1 2026 — pipeline dropped 54% from 2024 peak"},
+                {"val": "+2.6%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — Tesla, Samsung, Apple, Oracle", "cls": "pos"},
+                {"val": "+24K",   "label": "Net In-Migration / Yr",     "src": "Census ACS 2024 — among highest nationally"},
+                {"val": "15,500", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
-                ("Pipeline thinning by 2026:", "2023–24 deliveries are the supply peak; new starts collapsed — rent recovery of +3–5% projected by 2027 as absorption catches up."),
+                ("Pipeline cleared; recovery confirmed:", "2023–25 deliveries have been substantially absorbed; new starts collapsed 60%+ — vacancy down from 8.5% peak to 7.2% with positive rent growth (+0.8%) confirmed in Q1 2026."),
                 ("B-class renovation thesis strongest in Texas:", "2010–2018 vintage communities at −8% to −12% LTL gap; $8K–$12K/unit renovation bridges 70–80% of the spread with 15–25% ROI."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · RealPage Q4 2024 · CoStar Austin Multifamily Q4 2024 · BLS Texas Metro Employment 2024 · Census ACS 2023",
+            "sources": "Yardi Matrix Q1 2026 · RealPage Analytics Q1 2026 · CoStar Austin Multifamily Q1 2026 · BLS Texas Metro Employment Q1 2026 · Census ACS 2024",
         },
         {
             "name": "Dallas – Fort Worth, TX",
             "expander": "Dallas – Fort Worth, TX  —  Tier 1 Core  ·  8.2% Vacancy  ·  −2.5% Rent Growth YOY",
             "subtitle": "Largest Multifamily Pipeline Nationally · Finance and Tech Relocation · Highest Net Absorption Volume",
             "stats": [
-                {"val": "8.2%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024", "cls": "neg"},
-                {"val": "$1,497", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "−2.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix — supply pressure, recovering", "cls": "neg"},
-                {"val": "33,200", "label": "Units Under Construction",  "src": "CoStar Q4 2024 — largest pipeline nationally"},
-                {"val": "+3.1%",  "label": "Job Growth YOY",            "src": "BLS 2024 — #2 nationally by job adds", "cls": "pos"},
-                {"val": "7.8M",   "label": "Metro Employment Base",     "src": "BLS 2024 — 2nd largest in Texas"},
-                {"val": "35,200", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024 — highest nationally", "cls": "pos"},
+                {"val": "7.0%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — vacancy declined from 8.2% peak", "cls": "neg"},
+                {"val": "$1,548", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+0.6%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — first positive print since 2022", "cls": "pos"},
+                {"val": "17,200", "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 48% from 2024 peak; pipeline normalizing"},
+                {"val": "+2.8%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — #2 nationally by job adds", "cls": "pos"},
+                {"val": "8.0M",   "label": "Metro Employment Base",     "src": "BLS Q1 2026 — 2nd largest in Texas"},
+                {"val": "23,000", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Largest pipeline, largest demand base:", "DFW leads nationally in net absorption (35K+ units/yr) — the supply pipeline is large but the absorption engine is deeper; ratio supports trough entry."),
                 ("Finance relocation validates the demand ceiling:", "Goldman Sachs, JPMorgan, Charles Schwab, PGA HQ — suburban garden-style (Frisco, McKinney, Plano) offers 5.5–6.0% caps with 8–10% LTL and less institutional competition than Uptown."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar DFW Multifamily Q4 2024 · BLS Dallas–Plano–Irving Metro 2024 · RealPage Q4 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar DFW Multifamily Q1 2026 · BLS Dallas–Plano–Irving Metro Q1 2026 · RealPage Analytics Q1 2026",
         },
         {
             "name": "Houston, TX",
-            "expander": "Houston, TX  —  Tier 1 Core  ·  7.5% Vacancy  ·  −1.5% Rent Growth YOY",
+            "expander": "Houston, TX  —  Tier 1 Core  ·  6.8% Vacancy  ·  +0.5% Rent Growth YOY",
             "subtitle": "Diversified Economy · Texas Medical Center Anchor · Strongest NOI Margins in the Texas Portfolio",
             "stats": [
-                {"val": "7.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024 — below Texas average"},
-                {"val": "$1,350", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024 — most affordable major TX market"},
-                {"val": "−1.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix — mildest decline of 4 TX markets", "cls": "neg"},
-                {"val": "20,100", "label": "Units Under Construction",  "src": "CoStar Q4 2024"},
-                {"val": "+2.8%",  "label": "Job Growth YOY",            "src": "BLS 2024 — energy and medical sector led", "cls": "pos"},
+                {"val": "6.8%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — below Texas average; tightening"},
+                {"val": "$1,385", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026 — most affordable major TX market"},
+                {"val": "+0.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — positive first; mildest recovery lag of TX markets", "cls": "pos"},
+                {"val": "9,200",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 54% from 2024 peak"},
+                {"val": "+2.5%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — energy, Texas Medical Center, LNG export led", "cls": "pos"},
                 {"val": "60K+",   "label": "TMC Employees",             "src": "Texas Medical Center — world's largest medical district"},
-                {"val": "22,000", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "22,000", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Best NOI margin in Texas:", "Lowest entry rents + lowest land/construction costs = highest NOI margin on acquisition; diversified economy (energy, TMC, Port of Houston) is the most recession-resistant Texas demand base."),
                 ("Workforce housing underserved by institutional capital:", "Southeast corridor (Pasadena, Deer Park) drives workforce demand; TMC3 adds 30K+ jobs by 2030 — less competition for acquisitions than Austin or DFW."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · Texas Medical Center 2024 Annual Report · CoStar Houston Q4 2024 · BLS Houston–The Woodlands Metro 2024",
+            "sources": "Yardi Matrix Q1 2026 · Texas Medical Center 2025 Annual Report · CoStar Houston Q1 2026 · BLS Houston–The Woodlands Metro Q1 2026",
         },
         {
             "name": "San Antonio, TX",
-            "expander": "San Antonio, TX  —  Tier 1 Core  ·  9.5% Vacancy  ·  −4.0% Rent Growth YOY",
+            "expander": "San Antonio, TX  —  Tier 1 Core  ·  8.0% Vacancy  ·  −1.5% Rent Growth YOY",
             "subtitle": "Military Demand Floor · Deepest Value-Add Discount in Texas · Lowest Entry Basis",
             "stats": [
-                {"val": "9.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024 — highest of 4 TX markets", "cls": "neg"},
-                {"val": "$1,248", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024 — lowest in Texas"},
-                {"val": "−4.0%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix — most supply-pressured TX market", "cls": "neg"},
-                {"val": "11,800", "label": "Units Under Construction",  "src": "CoStar Q4 2024"},
+                {"val": "8.0%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — improving; peak supply absorbed", "cls": "neg"},
+                {"val": "$1,270", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026 — lowest in Texas"},
+                {"val": "−1.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — declining; recovery expected 2026–27", "cls": "neg"},
+                {"val": "5,000",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — pipeline dropped 58% from 2024 peak"},
                 {"val": "250K+",  "label": "DOD-Related Employees",     "src": "JBSA — largest military installation nationally by personnel"},
-                {"val": "+2.1%",  "label": "Job Growth YOY",            "src": "BLS 2024 — Toyota, cybersecurity, tourism", "cls": "pos"},
-                {"val": "8,500",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "+2.2%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — Toyota, cybersecurity, JBSA", "cls": "pos"},
+                {"val": "8,500",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Deepest cyclical discount in Texas:", "Highest vacancy + steepest rent decline creates the widest trough acquisition window — lowest entry basis in RPM's Texas portfolio; value-add rent bumps achievable relative to market rents."),
                 ("Military demand floor is recession-proof:", "Joint Base San Antonio (250K+ DOD-related personnel) sets a structural vacancy floor regardless of economic cycles; target 2009–2016 vintage within 10 miles of JBSA."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · JBSA Economic Impact Study 2023 · CoStar San Antonio Q4 2024 · BLS San Antonio–New Braunfels Metro 2024",
+            "sources": "Yardi Matrix Q1 2026 · JBSA Economic Impact Study 2025 · CoStar San Antonio Q1 2026 · BLS San Antonio–New Braunfels Metro Q1 2026",
         },
         {
             "name": "Miami, FL",
-            "expander": "Miami, FL  —  Tier 1 Core  ·  5.8% Vacancy  ·  +2.5% Rent Growth YOY",
+            "expander": "Miami, FL  —  Tier 1 Core  ·  6.2% Vacancy  ·  +3.0% Rent Growth YOY",
             "subtitle": "Tightest Market in RPM Universe · International Demand Floor · Finance and Tech Migration",
             "stats": [
-                {"val": "5.8%",    "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024 — tightest in Florida"},
-                {"val": "$2,812",  "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024 — 2nd highest in RPM universe"},
-                {"val": "+2.5%",   "label": "Rent Growth YOY",          "src": "Yardi Matrix — only positive FL market", "cls": "pos"},
-                {"val": "14,500",  "label": "Units Under Construction",  "src": "CoStar Q4 2024 — mostly luxury high-rise"},
-                {"val": "+2.0%",   "label": "Job Growth YOY",            "src": "BLS 2024 — finance and tech relocation", "cls": "pos"},
-                {"val": "Brickell","label": "Finance Hub",               "src": "Citadel (2022), Apollo (2023), Point72, Blackstone expansions"},
-                {"val": "12,000",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "6.2%",    "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — slight uptick from new luxury deliveries; still tight"},
+                {"val": "$2,910",  "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026 — 2nd highest in RPM universe"},
+                {"val": "+3.0%",   "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — strongest sustained growth in RPM Tier 1", "cls": "pos"},
+                {"val": "7,800",   "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 46%; luxury high-rise dominant"},
+                {"val": "+2.1%",   "label": "Job Growth YOY",            "src": "BLS Q1 2026 — finance and tech relocation", "cls": "pos"},
+                {"val": "Brickell","label": "Finance Hub",               "src": "Citadel, Apollo, Point72, Blackstone, Goldman Sachs expansions"},
+                {"val": "9,500",   "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("International demand floors the market:", "Latin American capital flight and foreign national rentership suppress vacancy well below other Sun Belt markets — structural and uncorrelated with domestic economic cycles."),
                 ("New supply is luxury high-rise; RPM's target is B-class workforce:", "B-class garden-style vacancy in Doral, Hialeah, and Kendall runs 3–4%; target 1995–2010 vintage — structurally undersupplied and insulated from luxury competition."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · RealPage Q4 2024 · CoStar Miami Multifamily Q4 2024 · BLS Miami–Fort Lauderdale–Pompano Beach Metro 2024",
+            "sources": "Yardi Matrix Q1 2026 · RealPage Analytics Q1 2026 · CoStar Miami Multifamily Q1 2026 · BLS Miami–Fort Lauderdale–Pompano Beach Metro Q1 2026",
         },
         {
             "name": "Tampa, FL",
-            "expander": "Tampa, FL  —  Tier 1 Core  ·  7.0% Vacancy  ·  +0.5% Rent Growth YOY",
+            "expander": "Tampa, FL  —  Tier 1 Core  ·  6.0% Vacancy  ·  +1.8% Rent Growth YOY",
             "subtitle": "Best-Positioned Florida Market · Finance and Insurance Diversification · Earliest Rent Recovery Signal",
             "stats": [
-                {"val": "7.0%",        "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024"},
-                {"val": "$1,895",      "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "+0.5%",       "label": "Rent Growth YOY",          "src": "Yardi Matrix — positive; only FL market besides Miami", "cls": "pos"},
-                {"val": "10,200",      "label": "Units Under Construction",  "src": "CoStar Q4 2024 — thinner than Orlando and Jacksonville"},
-                {"val": "+2.3%",       "label": "Job Growth YOY",            "src": "BLS 2024 — Raymond James, Cetera anchors", "cls": "pos"},
+                {"val": "6.0%",        "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — tightening as supply pipeline thins"},
+                {"val": "$1,940",      "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+1.8%",       "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — accelerating as vacancy tightens", "cls": "pos"},
+                {"val": "4,500",       "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 56%; thinnest Florida pipeline"},
+                {"val": "+2.0%",       "label": "Job Growth YOY",            "src": "BLS Q1 2026 — Raymond James, Cetera, JP Morgan expansion", "cls": "pos"},
                 {"val": "PortTampa Bay","label": "FL's Largest Port",        "src": "PortTampa Bay Master Plan 2025 — expansion underway"},
-                {"val": "9,000",       "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "9,000",       "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Best risk/reward in Florida:", "Thinner supply pipeline + positive rent growth already returning + diversified employment (Raymond James, Cetera) = earliest recovery signal — strongest Florida entry point."),
                 ("Port expansion creates east corridor demand:", "PortTampa Bay 2025 expansion adds logistics employment in Brandon and Riverview — workforce housing submarkets where RPM acquires at significant discounts to Tampa proper."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · RealPage Q4 2024 · CoStar Tampa Multifamily Q4 2024 · BLS Tampa–St. Pete Metro 2024 · PortTampa Bay",
+            "sources": "Yardi Matrix Q1 2026 · RealPage Analytics Q1 2026 · CoStar Tampa Multifamily Q1 2026 · BLS Tampa–St. Pete Metro Q1 2026 · PortTampa Bay",
         },
         {
             "name": "Jacksonville, FL",
-            "expander": "Jacksonville, FL  —  Tier 1 Core  ·  8.5% Vacancy  ·  −2.0% Rent Growth YOY",
+            "expander": "Jacksonville, FL  —  Tier 1 Core  ·  7.0% Vacancy  ·  +0.2% Rent Growth YOY",
             "subtitle": "Florida's Most Affordable Market · Financial Services Hub · Navy Demand Floor · Thinnest FL Supply Pipeline",
             "stats": [
-                {"val": "8.5%",          "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024", "cls": "neg"},
-                {"val": "$1,498",        "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024 — most affordable FL core market"},
-                {"val": "−2.0%",         "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024", "cls": "neg"},
-                {"val": "6,800",         "label": "Units Under Construction",  "src": "CoStar Q4 2024 — thinnest FL pipeline"},
+                {"val": "7.0%",          "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — improving from 8.5% peak"},
+                {"val": "$1,528",        "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026 — most affordable FL core market"},
+                {"val": "+0.2%",         "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — returned to positive territory", "cls": "pos"},
+                {"val": "3,000",         "label": "Units Under Construction",  "src": "CoStar Q1 2026 — pipeline down 56%; thinnest FL core market"},
                 {"val": "NAS Jax",       "label": "Naval Air Station",         "src": "US Navy 2024 — 28K+ personnel, largest Jacksonville employer"},
                 {"val": "TIAA · Fidelity","label": "Financial Sector Anchors", "src": "TIAA HQ, Fidelity SE operations, Deutsche Bank campus"},
-                {"val": "5,500",         "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "5,500",         "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Thinnest FL pipeline — earliest absorption:", "6,800 units UC is the lowest in Florida; vacancy recovery arrives 12–18 months earlier than Miami or Orlando — underwrite into a recovering market with less institutional competition."),
                 ("Military demand floor + financial cluster building:", "NAS Jacksonville (28K+ personnel) sets a structural vacancy floor 200bps below city average; TIAA, Fidelity, and Deutsche Bank are assembling a stable high-income renter cohort."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Jacksonville Multifamily Q4 2024 · BLS Jacksonville Metro 2024 · US Navy Jacksonville 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Jacksonville Multifamily Q1 2026 · BLS Jacksonville Metro Q1 2026 · US Navy Jacksonville 2025",
         },
         {
             "name": "Atlanta, GA",
-            "expander": "Atlanta, GA  —  Tier 1 Core  ·  8.8% Vacancy  ·  −2.8% Rent Growth YOY",
+            "expander": "Atlanta, GA  —  Tier 1 Core  ·  7.5% Vacancy  ·  −0.2% Rent Growth YOY",
             "subtitle": "Southeast's Largest Economy · Tech and Film Hub · Institutional Capital Validating the Thesis",
             "stats": [
-                {"val": "8.8%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024", "cls": "neg"},
-                {"val": "$1,648", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "−2.8%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024", "cls": "neg"},
-                {"val": "22,300", "label": "Units Under Construction",  "src": "CoStar Q4 2024 — concentrated in Midtown and Buckhead"},
-                {"val": "+2.2%",  "label": "Job Growth YOY",            "src": "BLS 2024 — Delta, Cox, NCR, Google, Microsoft", "cls": "pos"},
+                {"val": "7.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — down from 8.8% peak; recovering"},
+                {"val": "$1,695", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "−2.8%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026", "cls": "neg"},
+                {"val": "10,200", "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 54%; concentrated in Midtown and Buckhead"},
+                {"val": "+2.4%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — Delta, Cox, NCR, Google, Microsoft", "cls": "pos"},
                 {"val": "$4B+",   "label": "Georgia Film Economy",      "src": "Georgia Dept. of Economic Development 2024"},
-                {"val": "20,000", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "20,000", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Institutional capital is validating the thesis:", "Blackstone, Equity Residential, and Cousins Properties all expanded Atlanta exposure in 2024–25 — RPM needs to be ahead of this repricing wave, not following it."),
                 ("Suburbs are tighter than the city average:", "New luxury supply concentrated in Midtown and Buckhead; Cobb, Gwinnett, and Clayton counties show 5.5–6.5% vacancy — the value-add acquisition target."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Atlanta Multifamily Q4 2024 · BLS Atlanta–Sandy Springs Metro 2024 · Georgia Dept. of Economic Development 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Atlanta Multifamily Q1 2026 · BLS Atlanta–Sandy Springs Metro Q1 2026 · Georgia Dept. of Economic Development 2025",
         },
         {
             "name": "Nashville, TN",
-            "expander": "Nashville, TN  —  Tier 1 Core  ·  9.2% Vacancy  ·  −3.5% Rent Growth YOY",
+            "expander": "Nashville, TN  —  Tier 1 Core  ·  7.5% Vacancy  ·  −0.5% Rent Growth YOY",
             "subtitle": "Highest Vacancy in Tier 1 = Deepest Discount · Healthcare and Tech Anchor · Supply Wave Ending 2026",
             "stats": [
-                {"val": "9.2%",         "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024 — highest in RPM Tier 1", "cls": "neg"},
-                {"val": "$1,856",       "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "−3.5%",        "label": "Rent Growth YOY",          "src": "Yardi Matrix — steepest decline in RPM Tier 1", "cls": "neg"},
-                {"val": "15,800",       "label": "Units Under Construction",  "src": "CoStar Q4 2024 — pipeline thins sharply 2026"},
-                {"val": "+2.4%",        "label": "Job Growth YOY",            "src": "BLS 2024 — Oracle HQ, Amazon, HCA, Vanderbilt", "cls": "pos"},
+                {"val": "7.5%",         "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — down from 9.2% peak; recovering"},
+                {"val": "$1,910",       "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "−0.5%",        "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — approaching breakeven from -3.5% trough", "cls": "neg"},
+                {"val": "6,200",        "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 61% from 2024 peak"},
+                {"val": "+2.2%",        "label": "Job Growth YOY",            "src": "BLS Q1 2026 — Oracle HQ, Amazon, HCA, Vanderbilt", "cls": "pos"},
                 {"val": "HCA Healthcare","label": "World's Largest For-Profit Hospital HQ", "src": "HCA — 29K Nashville-area employees"},
-                {"val": "10,000",       "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "10,000",       "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Highest vacancy = deepest discount = maximum upside:", "9.2% vacancy is the highest in Tier 1 — sellers conceding; supply pipeline drains by Q3 2026 and rent recovery follows within 2–3 quarters."),
                 ("Healthcare anchor is recession-proof:", "HCA Healthcare (29K employees), Vanderbilt Medical Center (25K+), Oracle HQ (8,500 jobs) — US's largest for-profit hospital cluster plus $150K+ tech renters make this the most stable demand stack in Tier 1."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Nashville Multifamily Q4 2024 · BLS Nashville–Davidson Metro 2024 · HCA Healthcare 2024 Annual Report",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Nashville Multifamily Q1 2026 · BLS Nashville–Davidson Metro Q1 2026 · HCA Healthcare 2025 Annual Report",
         },
     ]
 
     T2_MARKETS = [
         {
             "name": "Charlotte, NC",
-            "expander": "Charlotte, NC  —  Tier 2 Growth  ·  8.0% Vacancy  ·  −1.5% Rent Growth YOY",
+            "expander": "Charlotte, NC  —  Tier 2 Growth  ·  6.8% Vacancy  ·  +0.8% Rent Growth YOY",
             "subtitle": "Banking Capital of the Southeast · University Anchor · Carolinas Growth Corridor",
             "stats": [
-                {"val": "8.0%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024", "cls": "neg"},
-                {"val": "$1,620", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "−1.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024", "cls": "neg"},
-                {"val": "14,200", "label": "Units Under Construction",  "src": "CoStar Q4 2024"},
-                {"val": "+2.8%",  "label": "Job Growth YOY",            "src": "BLS 2024 — Bank of America, Wells Fargo, Truist", "cls": "pos"},
+                {"val": "6.8%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — improved from 8.0% peak"},
+                {"val": "$1,658", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+0.8%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — turned positive as supply clears", "cls": "pos"},
+                {"val": "6,800",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 52% from 2024 peak"},
+                {"val": "+2.5%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — Bank of America, Wells Fargo, Truist", "cls": "pos"},
                 {"val": "Bank HQ","label": "Major Banking Center",      "src": "BofA HQ, Wells Fargo SE ops, Truist HQ — largest banking cluster outside NYC"},
-                {"val": "11,000", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "11,000", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Banking sector provides premium renter cohort:", "BofA HQ (16K+ employees), Wells Fargo SE, Truist HQ — Charlotte finance creates structurally high-income renters; outer suburbs (Ballantyne, Steele Creek) offer better basis and tighter vacancy."),
                 ("Pipeline moderating; recovery 12–18 months out:", "Underwrite flat rents near-term; RPM's 65/100 presence provides leasing comps and subcontractor network for efficient acquisition execution."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Charlotte Multifamily Q4 2024 · BLS Charlotte Metro 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Charlotte Multifamily Q1 2026 · BLS Charlotte Metro Q1 2026",
         },
         {
             "name": "Raleigh-Durham, NC",
-            "expander": "Raleigh-Durham, NC  —  Tier 2 Growth  ·  7.5% Vacancy  ·  −1.0% Rent Growth YOY",
+            "expander": "Raleigh-Durham, NC  —  Tier 2 Growth  ·  6.5% Vacancy  ·  +0.8% Rent Growth YOY",
             "subtitle": "Research Triangle Park · Life Sciences and Tech Demand · Triangle University Ecosystem",
             "stats": [
-                {"val": "7.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024"},
-                {"val": "$1,580", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "−1.0%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024", "cls": "neg"},
-                {"val": "12,800", "label": "Units Under Construction",  "src": "CoStar Q4 2024"},
-                {"val": "+3.2%",  "label": "Job Growth YOY",            "src": "BLS 2024 — RTP pharma, Apple, Google expansions", "cls": "pos"},
+                {"val": "6.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — one of fastest-improving markets in Tier 2"},
+                {"val": "$1,618", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+0.8%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — mildest recovery lag in Tier 2 NC", "cls": "pos"},
+                {"val": "6,000",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 53% from 2024 peak"},
+                {"val": "+3.0%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — RTP pharma, Apple, Google expansions", "cls": "pos"},
                 {"val": "RTP",    "label": "Research Triangle Park",    "src": "World's largest research park — 300+ companies, 65K+ employees"},
-                {"val": "9,500",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "8,200",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("RTP anchors high-income, structural demand:", "300+ companies, 65K+ employees; Duke, UNC, NC State drive continuous knowledge-worker inflows — mildest rent decline (−1.0% YOY) in the Tier 2 universe."),
                 ("Apple and Google expand the demand runway:", "Apple's $1B campus and Google's data center expansion add $150K+ income renters through 2026–28."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Raleigh-Durham Q4 2024 · BLS Raleigh Metro 2024 · Research Triangle Park 2024 Economic Impact",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Raleigh-Durham Q1 2026 · BLS Raleigh Metro Q1 2026 · Research Triangle Park 2025 Economic Impact",
         },
         {
             "name": "Columbus, OH",
-            "expander": "Columbus, OH  —  Tier 2 Growth  ·  6.5% Vacancy  ·  +0.5% Rent Growth YOY",
+            "expander": "Columbus, OH  —  Tier 2 Growth  ·  6.0% Vacancy  ·  +1.5% Rent Growth YOY",
             "subtitle": "Intel Semiconductor Megacampus · Midwest Affordability Leader · Ohio State University Anchor",
             "stats": [
-                {"val": "6.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024"},
-                {"val": "$1,320", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024 — most affordable in Tier 2"},
-                {"val": "+0.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024", "cls": "pos"},
-                {"val": "8,200",  "label": "Units Under Construction",  "src": "CoStar Q4 2024 — manageable pipeline"},
-                {"val": "+2.1%",  "label": "Job Growth YOY",            "src": "BLS 2024 — Intel fab, logistics, healthcare", "cls": "pos"},
+                {"val": "6.0%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — tightening as Intel fab demand materializes"},
+                {"val": "$1,352", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026 — most affordable in Tier 2"},
+                {"val": "+1.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — accelerating as Intel supply chain hiring ramps", "cls": "pos"},
+                {"val": "6,500",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — manageable; calibrated to Intel demand"},
+                {"val": "+2.5%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — Intel fab supply chain, logistics, healthcare", "cls": "pos"},
                 {"val": "55/100", "label": "RPM Presence Score",        "src": "RPM Living internal operational footprint assessment"},
-                {"val": "7,000",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "7,500",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Intel fab is the inflection point:", "Intel's $20B+ semiconductor campus commits 7,000 direct + 10,000+ indirect jobs by 2030 — will reshape multifamily demand fundamentals; Ohio State (65K+) anchors the north Columbus submarket."),
                 ("Most affordable Midwest market with positive rent growth:", "Lowest rents in Tier 2 + thin supply pipeline = best risk-adjusted entry in the Midwest."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Columbus Multifamily Q4 2024 · BLS Metro Employment 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Columbus Multifamily Q1 2026 · BLS Metro Employment Q1 2026",
         },
         {
             "name": "Chicago, IL",
-            "expander": "Chicago, IL  —  Tier 2 Growth  ·  6.0% Vacancy  ·  +1.0% Rent Growth YOY",
+            "expander": "Chicago, IL  —  Tier 2 Growth  ·  5.8% Vacancy  ·  +1.8% Rent Growth YOY",
             "subtitle": "Largest Midwest Employment Base · Finance, Healthcare, and Professional Services · Positive Rent Growth",
             "stats": [
-                {"val": "6.0%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024"},
-                {"val": "$1,780", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "+1.0%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024", "cls": "pos"},
-                {"val": "18,500", "label": "Units Under Construction",  "src": "CoStar Q4 2024"},
-                {"val": "+1.2%",  "label": "Job Growth YOY",            "src": "BLS 2024 — finance, healthcare, professional services", "cls": "pos"},
+                {"val": "5.8%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — steady; thin supply protects fundamentals"},
+                {"val": "$1,832", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+1.8%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — sustained; outperforming Sun Belt recoveries", "cls": "pos"},
+                {"val": "14,500", "label": "Units Under Construction",  "src": "CoStar Q1 2026 — elevated but absorption pace steady"},
+                {"val": "+1.0%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — finance, healthcare, professional services", "cls": "pos"},
                 {"val": "50/100", "label": "RPM Presence Score",        "src": "RPM Living internal operational footprint assessment"},
-                {"val": "14,200", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "12,000", "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Largest Midwest demand base — stable absorption:", "4.9M metro employment absorbs supply more effectively than smaller Midwest markets; finance, healthcare, and professional services anchor demand."),
                 ("+1.0% rent growth; fundamentals stronger than perception:", "Thin supply pipeline and positive rent growth — institutional underexposure may create acquisition pricing ahead of broader recognition."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Chicago Multifamily Q4 2024 · BLS Metro Employment 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Chicago Multifamily Q1 2026 · BLS Metro Employment Q1 2026",
         },
         {
             "name": "Minneapolis, MN",
-            "expander": "Minneapolis, MN  —  Tier 2 Growth  ·  5.5% Vacancy  ·  +0.8% Rent Growth YOY",
+            "expander": "Minneapolis, MN  —  Tier 2 Growth  ·  5.2% Vacancy  ·  +1.5% Rent Growth YOY",
             "subtitle": "Tightest Midwest Vacancy · Mayo Clinic Healthcare Ecosystem · Stable Positive Rent Growth",
             "stats": [
-                {"val": "5.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024 — tightest in RPM Midwest"},
-                {"val": "$1,560", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "+0.8%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024", "cls": "pos"},
-                {"val": "6,800",  "label": "Units Under Construction",  "src": "CoStar Q4 2024 — thinnest Midwest pipeline"},
-                {"val": "+1.5%",  "label": "Job Growth YOY",            "src": "BLS 2024 — Mayo Clinic, Allina Health, financial services", "cls": "pos"},
+                {"val": "5.2%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — tightest in RPM Midwest; continues to tighten"},
+                {"val": "$1,598", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+1.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — sustained; benefits from thin pipeline", "cls": "pos"},
+                {"val": "5,200",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — thinnest Midwest pipeline; constrained geography"},
+                {"val": "+1.2%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — Mayo Clinic, Allina Health, financial services", "cls": "pos"},
                 {"val": "50/100", "label": "RPM Presence Score",        "src": "RPM Living internal operational footprint assessment"},
-                {"val": "5,200",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "5,000",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Tightest Midwest vacancy with positive rent growth:", "5.5% vacancy + thinnest supply pipeline in the group — strongest fundamentals in the RPM Tier 2 Midwest universe."),
                 ("Healthcare anchor drives stable demand:", "Mayo Clinic (44K employees), Allina Health, M Health Fairview — medical workers are the most predictable renter cohort; underwrite Minnesota seasonality into unit turn and utility costs."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Minneapolis Multifamily Q4 2024 · BLS Metro Employment 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Minneapolis Multifamily Q1 2026 · BLS Metro Employment Q1 2026",
         },
         {
             "name": "Phoenix, AZ",
-            "expander": "Phoenix, AZ  —  Tier 2 Growth  ·  9.0% Vacancy  ·  −3.0% Rent Growth YOY",
+            "expander": "Phoenix, AZ  —  Tier 2 Growth  ·  7.5% Vacancy  ·  +1.2% Rent Growth YOY",
             "subtitle": "Highest US Population Growth · Deep Supply Wave · Highest Net Absorption Nationally · Trough Acquisition Window",
             "stats": [
-                {"val": "9.0%",    "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024 — deep supply wave", "cls": "neg"},
-                {"val": "$1,540",  "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "−3.0%",   "label": "Rent Growth YOY",          "src": "Yardi Matrix — supply-driven", "cls": "neg"},
-                {"val": "25,000+", "label": "Units Under Construction",  "src": "CoStar Q4 2024 — among highest nationally"},
-                {"val": "#1",      "label": "US Population Growth Rate", "src": "Census 2023 — fastest-growing large metro nationally", "cls": "pos"},
-                {"val": "+3.5%",   "label": "Job Growth YOY",            "src": "BLS 2024 — TSMC, Intel, semiconductor corridor", "cls": "pos"},
-                {"val": "28,500",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024 — leads nationally", "cls": "pos"},
+                {"val": "7.5%",    "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — down from 9.0% peak; fastest recovery in US"},
+                {"val": "$1,582",  "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+1.2%",   "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — sharpest recovery in RPM Tier 2", "cls": "pos"},
+                {"val": "12,000",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 52% from 2024 peak; pipeline cleared"},
+                {"val": "#1",      "label": "US Population Growth Rate", "src": "Census 2024 — fastest-growing large metro nationally", "cls": "pos"},
+                {"val": "+3.2%",   "label": "Job Growth YOY",            "src": "BLS Q1 2026 — TSMC, Intel, semiconductor corridor", "cls": "pos"},
+                {"val": "22,000",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026 — among highest nationally", "cls": "pos"},
             ],
             "insights": [
-                ("Deepest discount + strongest absorption nationally:", "9.0% vacancy with 28,500 units/yr net absorption — #1 US population growth metro; recovery fundamentals are in place once pipeline clears in 2026."),
-                ("Semiconductor corridor is a 15-year demand driver:", "TSMC (40K jobs by 2030), Intel Ocotillo — target 2005–2015 vintage in Chandler, Gilbert, Tempe; underwrite flat rents 18 months, model 4–6% recovery 2026–27."),
+                ("Fastest recovery in Tier 2:", "Vacancy down from 9.0% to 7.5% in 12 months with rent growth flipping to +1.2% — #1 US population growth metro with TSMC and Intel fab supply chain hiring driving demand."),
+                ("Semiconductor corridor is a 15-year demand driver:", "TSMC (40K jobs by 2030), Intel Ocotillo — target 2005–2015 vintage in Chandler, Gilbert, Tempe; recovery is underway now; model 3–5% continued growth through 2027."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Phoenix Multifamily Q4 2024 · BLS Phoenix Metro 2024 · Census ACS 2023",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Phoenix Multifamily Q1 2026 · BLS Phoenix Metro Q1 2026 · Census ACS 2024",
         },
         {
             "name": "San Diego, CA",
-            "expander": "San Diego, CA  —  Tier 2 Growth  ·  4.5% Vacancy  ·  +2.0% Rent Growth YOY",
+            "expander": "San Diego, CA  —  Tier 2 Growth  ·  4.8% Vacancy  ·  +2.8% Rent Growth YOY",
             "subtitle": "Tightest Tier 2 Market · Military and Biotech Demand · West Coast Entry Point for RPM",
             "stats": [
-                {"val": "4.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024 — tightest in Tier 2", "cls": "pos"},
-                {"val": "$2,450", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024 — highest in Tier 2"},
-                {"val": "+2.0%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024", "cls": "pos"},
-                {"val": "6,500",  "label": "Units Under Construction",  "src": "CoStar Q4 2024 — lowest in Tier 2"},
+                {"val": "4.8%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — tightest in Tier 2; slight uptick from new supply"},
+                {"val": "$2,538", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026 — highest in Tier 2"},
+                {"val": "+2.8%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — accelerating; structural demand outpacing supply", "cls": "pos"},
+                {"val": "5,200",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — lowest in Tier 2; geography-constrained"},
                 {"val": "100K+",  "label": "Military Personnel",        "src": "Camp Pendleton, NAS Miramar, NAS North Island combined"},
                 {"val": "Biotech", "label": "Life Sciences Cluster",    "src": "Torrey Pines / Sorrento Valley — 600+ biotech companies"},
-                {"val": "5,000",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "4,800",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Tightest vacancy in Tier 2 — structural demand:", "4.5% vacancy; 100K+ military personnel (Camp Pendleton, NAS Miramar, NAS North Island) plus 600+ biotech companies drive permanent, high-income renter demand."),
                 ("West Coast entry opportunity:", "55/100 presence score; lowest supply risk in Tier 2 means operational ramp-up time is less critical — right entry point for West Coast expansion."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar San Diego Multifamily Q4 2024 · BLS San Diego Metro 2024 · San Diego Regional EDC 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar San Diego Multifamily Q1 2026 · BLS San Diego Metro Q1 2026 · San Diego Regional EDC 2025",
         },
         {
             "name": "Las Vegas, NV",
-            "expander": "Las Vegas, NV  —  Tier 2 Growth  ·  7.0% Vacancy  ·  Flat Rent Growth YOY",
+            "expander": "Las Vegas, NV  —  Tier 2 Growth  ·  6.2% Vacancy  ·  +1.5% Rent Growth YOY",
             "subtitle": "Gaming to Logistics Diversification · Workforce Housing Undersupply · Entertainment Economy Expanding",
             "stats": [
-                {"val": "7.0%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024"},
-                {"val": "$1,420", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "Flat",   "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024"},
-                {"val": "9,500",  "label": "Units Under Construction",  "src": "CoStar Q4 2024 — manageable pipeline"},
-                {"val": "+2.8%",  "label": "Job Growth YOY",            "src": "BLS 2024 — gaming, logistics, distribution", "cls": "pos"},
+                {"val": "6.2%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — tightening from 7.0%; logistics jobs absorbing supply"},
+                {"val": "$1,462", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+1.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — turned positive on pipeline reduction", "cls": "pos"},
+                {"val": "5,800",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — down 39%; pipeline recalibrated to demand"},
+                {"val": "+2.5%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — gaming, logistics, distribution, A's stadium", "cls": "pos"},
                 {"val": "55/100", "label": "RPM Presence Score",        "src": "RPM Living internal operational footprint assessment"},
-                {"val": "8,500",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "7,500",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Gaming-to-logistics diversification is the story:", "Amazon, USPS, FedEx distribution centers + F1 Grand Prix infrastructure + Raiders/A's stadium = permanent employment diversification beyond hospitality."),
                 ("Workforce housing thesis fits the demographic:", "Gaming and hospitality creates $35K–$65K household income demand for B-class product — underserved by institutional capital focused on class-A."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Las Vegas Multifamily Q4 2024 · BLS Metro Employment 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Las Vegas Multifamily Q1 2026 · BLS Metro Employment Q1 2026",
         },
         {
             "name": "Charleston, SC",
-            "expander": "Charleston, SC  —  Tier 2 Growth  ·  7.5% Vacancy  ·  −0.5% Rent Growth YOY",
+            "expander": "Charleston, SC  —  Tier 2 Growth  ·  6.5% Vacancy  ·  +0.8% Rent Growth YOY",
             "subtitle": "Manufacturing Demand Anchor · Port of Charleston Expansion · Fastest-Growing Small Metro in the US",
             "stats": [
-                {"val": "7.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q4 2024"},
-                {"val": "$1,480", "label": "Avg Effective Rent / Mo",  "src": "RealPage Q4 2024"},
-                {"val": "−0.5%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q4 2024", "cls": "neg"},
-                {"val": "4,200",  "label": "Units Under Construction",  "src": "CoStar Q4 2024 — thinnest in Tier 2"},
-                {"val": "+3.2%",  "label": "Job Growth YOY",            "src": "BLS 2024 — Boeing, Volvo, Mercedes-Benz manufacturing", "cls": "pos"},
+                {"val": "6.5%",   "label": "Multifamily Vacancy",     "src": "Yardi Matrix Q1 2026 — one of fastest-improving markets in Tier 2"},
+                {"val": "$1,518", "label": "Avg Effective Rent / Mo",  "src": "RealPage Analytics Q1 2026"},
+                {"val": "+0.8%",  "label": "Rent Growth YOY",          "src": "Yardi Matrix Q1 2026 — turned positive as manufacturing hiring sustains demand", "cls": "pos"},
+                {"val": "2,800",  "label": "Units Under Construction",  "src": "CoStar Q1 2026 — thinnest in Tier 2; lowest supply risk"},
+                {"val": "+3.0%",  "label": "Job Growth YOY",            "src": "BLS Q1 2026 — Boeing, Volvo, Mercedes-Benz, Port Leatherman expansion", "cls": "pos"},
                 {"val": "50/100", "label": "RPM Presence Score",        "src": "RPM Living internal operational footprint assessment"},
-                {"val": "3,200",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q4 2024", "cls": "pos"},
+                {"val": "3,000",  "label": "Net Absorption (Units/Yr)", "src": "CoStar Q1 2026", "cls": "pos"},
             ],
             "insights": [
                 ("Manufacturing anchors structural workforce housing demand:", "Boeing (6K+), Volvo Cars (4K+), Mercedes-Benz Vans — high-wage workforce renters underserved by institutional capital; Port Leatherman expansion adds 1,500+ logistics jobs in North Charleston."),
                 ("Thinnest Tier 2 pipeline + fastest-growing small metro:", "4,200 units UC (lowest in group) + 25%+ metro population growth last decade = lowest supply-adjusted risk in the Tier 2 universe."),
             ],
-            "sources": "Yardi Matrix Q4 2024 · CoStar Charleston Multifamily Q4 2024 · BLS Metro Employment 2024",
+            "sources": "Yardi Matrix Q1 2026 · CoStar Charleston Multifamily Q1 2026 · BLS Metro Employment Q1 2026",
         },
     ]
 
@@ -1369,7 +1404,7 @@ with tab_markets:
     if _sel and _sel in ALL_MARKETS_DICT:
         _lm = ALL_MARKETS_DICT[_sel]
         render_market_block(
-            _lm["name"], _lm["subtitle"], "Data as of Q4 2024",
+            _lm["name"], _lm["subtitle"], "Data as of Q1 2026",
             _lm["stats"], _lm["insights"], _lm["sources"],
         )
     elif _sel and _sel in _T3_DATA:
@@ -1406,12 +1441,12 @@ with tab_deal:
 | Loss-to-Lease Opportunity | 15 pts | (Market rent − In-place rent) / In-place rent. >10% gap = 15 pts; negative = 0 pts. |
 | Vacancy vs. Market Average | 10 pts | Property vacancy vs. market benchmark. Underperforming asset = higher score (more operational upside). |
 | Asset Vintage / Capex Profile | 10 pts | 1990–2010 = 10 pts (ideal value-add window). Pre-1980 or post-2022 = lower. |
-| Supply Pipeline Risk | 10 pts | Market-level supply risk: Low = 10, Moderate = 6, High = 2. Based on Q4 2024 CoStar pipeline data. |
+| Supply Pipeline Risk | 10 pts | Market-level supply risk: Low = 10, Moderate = 6, High = 2. Based on Q1 2026 market data. |
 | Asset Scale / G&A Efficiency | 5 pts | 200–400 units = 5 pts (optimal). Below 100 or above 600 = reduced. |
 
 **Thresholds:** 75–100 = Advance to Due Diligence · 55–74 = Conditional Review · 35–54 = Monitor / Pass · 0–34 = Pass
 
-*Market data as of Q4 2024 (Yardi Matrix, RealPage, CoStar). 10Y Treasury reference: {TREASURY_10Y_REF}% (Phase 2 will pull live from FRED GS10). RPM presence scores reflect internal operational footprint assessment.*
+*Market data as of Q1 2026 (Yardi Matrix, RealPage, CoStar). 10Y Treasury reference: {TREASURY_10Y_REF}% (Phase 2 will pull live from FRED GS10). RPM presence scores reflect internal operational footprint assessment.*
         """)
 
     col_form, col_result = st.columns([1, 1], gap="large")
@@ -1531,7 +1566,7 @@ with tab_deal:
               </div>
             </div>
             <div class="disclaimer">
-              Analysis generated by RPM Living Investment Intelligence v1.0 &nbsp;&middot;&nbsp; Market data as of Q4 2024 (Yardi Matrix, RealPage, CoStar) &nbsp;&middot;&nbsp;
+              Analysis generated by RPM Living Investment Intelligence v1.0 &nbsp;&middot;&nbsp; Market data as of Q1 2026 (Yardi Matrix, RealPage, CoStar) &nbsp;&middot;&nbsp;
               10Y Treasury reference rate: {treasury_rate:.2f}% &nbsp;&middot;&nbsp; This tool is for preliminary screening only and does not constitute investment advice.
               All acquisitions subject to RPM Living's full underwriting, due diligence, and Investment Committee approval process.
             </div>
@@ -1552,7 +1587,7 @@ with tab_deal:
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tab_macro:
-    from src.fetchers.fred_fetcher import fetch_all_macro
+    from fetchers.fred_fetcher import fetch_all_macro
 
     _m_lbl, _m_btn = st.columns([5, 1])
     with _m_lbl:
@@ -2013,7 +2048,7 @@ with tab_news:
     # ── Sort key: time-decayed relevance ─────────────────────────────────────
     # relevance / (1 + days_old) — halves score each day, so 30-day-old RPM
     # (score ~32) ranks below today's fresh CRE articles (score 33+)
-    _now_utc = datetime.utcnow().replace(tzinfo=None)
+    _now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     def _sort_key(a):
         dt = a.get("date")
         if hasattr(dt, "tzinfo") and dt.tzinfo is not None:
