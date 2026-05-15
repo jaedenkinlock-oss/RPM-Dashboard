@@ -467,6 +467,11 @@ st.markdown(f"""
 @st.cache_data(ttl=3600, show_spinner=False)
 def load_data():
     raw = fetch_all_fundamentals()
+    # Normalize div_yield: yfinance ≥1.2 returns percentage (8.82) not decimal (0.0882)
+    if "div_yield" in raw.columns:
+        raw["div_yield"] = raw["div_yield"].apply(
+            lambda x: x / 100 if (x is not None and x == x and x > 1) else x
+        )
     return build_fundamentals_table(raw)
 
 with st.spinner(""):
@@ -566,7 +571,7 @@ with tab_thesis:
 
         "Loss-to-Lease Capture": """<p>Loss-to-lease is the difference between what a current tenant pays and what a new lease in the same unit would command today. That gap is contractual rent upside — it materializes automatically as units turn, with no reliance on market rent growth.</p>
 <ul>
-  <li><strong>Current spreads:</strong> Austin rents are running 5–8% below market; Nashville and Dallas are 7–10% below (Yardi Matrix, Q1 2026)</li>
+  <li><strong>Current spreads:</strong> Austin rents are running 5–8% below market; Nashville and Dallas are 7–10% below (Yardi Matrix, April 2026)</li>
   <li><strong>What it means in dollars:</strong> A 300-unit property with 12% loss-to-lease at normal turnover generates an estimated $400,000+ in incremental annual income as leases reset</li>
   <li><strong>Execution advantage:</strong> RPM's in-house leasing teams re-lease vacated units 30–60 days faster than properties managed by third parties</li>
 </ul>""",
@@ -1442,7 +1447,7 @@ with tab_deal:
 | Loss-to-Lease Opportunity | 15 pts | (Market rent − In-place rent) / In-place rent. >10% gap = 15 pts; negative = 0 pts. |
 | Vacancy vs. Market Average | 10 pts | Property vacancy vs. market benchmark. Underperforming asset = higher score (more operational upside). |
 | Asset Vintage / Capex Profile | 10 pts | 1990–2010 = 10 pts (ideal value-add window). Pre-1980 or post-2022 = lower. |
-| Supply Pipeline Risk | 10 pts | Market-level supply risk: Low = 10, Moderate = 6, High = 2. Based on Q1 2026 market data. |
+| Supply Pipeline Risk | 10 pts | Market-level supply risk: Low = 10, Moderate = 6, High = 2. Based on April 2026 market data. |
 | Asset Scale / G&A Efficiency | 5 pts | 200–400 units = 5 pts (optimal). Below 100 or above 600 = reduced. |
 
 **Thresholds:** 75–100 = Advance to Due Diligence · 55–74 = Conditional Review · 35–54 = Monitor / Pass · 0–34 = Pass
@@ -1486,7 +1491,7 @@ with tab_deal:
 
             treasury_rate = st.number_input("10Y Treasury Rate (%)", min_value=1.0, max_value=10.0,
                                             value=TREASURY_10Y_REF, step=0.05, format="%.2f",
-                                            help=f"Default: {TREASURY_10Y_REF}% (Q1 2026 proxy). Update to current rate for live analysis.")
+                                            help=f"Default: {TREASURY_10Y_REF}% (April 2026 proxy). Update to current rate for live analysis.")
 
             submitted = st.form_submit_button("Analyze Deal", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
